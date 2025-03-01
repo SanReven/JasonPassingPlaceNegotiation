@@ -1,18 +1,69 @@
 /*
+    Jason Passing Place Negotiation
+    ---------------------------
+
     Jason Application File
 
     This file defines the initial state of the MAS
 
-    Jason 3.3.0-SNAPSHOT
-    April 19, 2023 - 15:12:39
+    Jason 3.2.0
+    május 05, 2024 - 04:55:50
 */
 
-MAS demo {
+/*World types:
+D1 always starts from left and D2 always starts from right.
+In the the cases with numbers over 100, a player-controlled agent takes the place of the original D1, labelled P, facing right.
+The agent originally labelled D2 will now be labelled D1.
+Moving:
+    Right arrow: Move right (forward)
+    Left arrow: Move left (reverse)
+    Up arrow: Pull into passing place on left (has to be 1 space ahead or 1 space behind)
 
-    environment: example.Env(10)
+1-6: 2 drivers.
+    1: PP in middle to left of d1. (Q4 Scenario)
+    2: PP behind to left of d1.
+    3: PP behind to right of d1. (Q5 Scenario)
+    4: PP behind to left of d2. (Q6 Scenario but D2 CAN reverse)
+    5: PP behind to left of d1 AND PP behind to the right of d2.
+    6: No PP.
+7-10: 3 drivers.
+    7: PP in middle to left of d1, extra car behind d2.
+    8: PP in middle to right of d1, extra car behind d2. (Q7 Scenario)
+    9: PP behind to left of d1, extra car behind d1. (Q9 Scenario)
+    10: PP in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1.
+11-12: 4 drivers.
+    11: PP in middle to right of d1. 3 drivers on each side(Q8 Scenario)
+    12: PP in middle to right of d1 AND behind to the left of d1 AND behind to the left of d6. 3 drivers on each side.
+13-14: 6 drivers.
+    13: PP in middle to right of d1. 3 drivers on each side(Q8 Scenario)
+    14: PP in middle to right of d1 AND behind to the left of d1 AND behind to the left of d6. 3 drivers on each side.
 
-    agents: bob;
-            alice;
+
+101-106: 1 player 1 driver.
+    1: PP in middle to left of player. (Q4 Scenario)
+    2: PP behind to left of player.
+    3: PP behind to right of player. (Q5 Scenario)
+    4: PP behind to left of player. (Q6 Scenario but D1 CAN reverse)
+    5: PP behind to left of player AND PP behind to the right of player.
+    6: No PP.
+107-110: 1 player, 2 drivers.
+    7: PP in middle to left of player, extra car behind d1.
+    8: PP in middle to right of player, extra car behind d1. (Q7 Scenario)
+    9: PP behind to left of player, extra car behind player. (Q9 Scenario)
+    10: PP in middle to the left of player AND behind to the left of player AND behind to the left of d1, extra car behind player.
+111-112: 1 player, 3 drivers.
+    11: PP in middle to right of player. (Q8 Scenario). 1 driver ahead of player, 2 oncoming drivers.
+    12: PP in middle to right of player AND behind to the left of player AND behind to the left of d1. 1 driver ahead of player, 2 oncoming drivers.
+*/
+
+MAS main {
+
+    //(world option number, number of agents)
+    environment: example.Env(7,3)
+
+    agents: driver #3;
+            //player #1;
+            //drivercomm #4;
 
     aslSourcePath: "src/agt";
 }
