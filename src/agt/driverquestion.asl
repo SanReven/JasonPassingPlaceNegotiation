@@ -28,11 +28,6 @@ vision_dist(3).
         .print("PASSING PLACE OBTAINED");
         +last_pass(0).
 
-+last_pass(Dist)
-    <-  -last_pass(_);
-        .print("PASSING PLACE OBTAINED");
-        +last_pass(Dist).
-
 
 +flashing
     <- -flashing;
@@ -63,11 +58,18 @@ vision_dist(3).
         .print("SUCCESSFULLY RESUMED DRIVING");
         !drive.
 
-+!drive : road(_,_,free,_) 
+
++!drive : road(_,_,free,_) & last_pass(_)
     <-  ?facing(Dir);
         move_forward(Dir);
         ?last_pass(Dist);
         +last_pass(Dist + 1);
+        !drive.
+
+
++!drive : road(_,_,free,_) 
+    <-  ?facing(Dir);
+        move_forward(Dir);
         !drive.
 
 +!drive : not road(_,_,_,_)
@@ -90,15 +92,15 @@ vision_dist(3).
         -flashed;
         !resolve.
 
-+!resolve : flashed & pass(_,_,free,right)
++!resolve : flashed & pass(_,_,free,right)
     <-  +crawl_forward(rightPas);
         -flashed;
         !resolve.
 
-+!resolve : flashed & driver_behind(B)
++!resolve : flashed & driver_behind(B)
     <-  -flashed;
         //send "reverse_lights" to driver behind. REVISIT.
-        .wait(1000)
+        .wait(1000);
         !reverse;
         !resolve.
 
@@ -110,7 +112,7 @@ vision_dist(3).
 +!resolve : flashed
     <-  ?vision_dist(Vis);
         ?facing(Dir);
-        check_behind(Dir);
+        check_behind(Vis, Dir);
         check_ahead(Vis, Dir);
         !resolve.
 
@@ -208,8 +210,9 @@ vision_dist(3).
     <-  //!reverse;
         .print("Checking if driver behind...");
         +checking_driver_behind;
-        //COME BACK AND MAKE THIS DISTANCE-BASED TOO. REVISIT.
-        check_behind(Dir);
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_behind(Vis, Dir);
         !resolve.
 
 +!resolve : not road(_,_,_,has_pass(_)) & road(_,_,occupied(D),_)
@@ -226,7 +229,7 @@ vision_dist(3).
 +!reverse : road(_,_,occupied(N),_) & resolving_with(D) & not N=D
     <- .wait(500);
         ?facing(Dir);
-        check_behind(Dir);
+        check_behind(1, Dir);
         !reverse.
 
 +!reverse : road(_,_,_,has_pass(left)) & pass(X,Y,free,_)
@@ -263,7 +266,7 @@ vision_dist(3).
 
 +!reverse 
     <-  ?facing(Dir);
-        check_behind(Dir);
+        check_behind(1, Dir);
         !reverse.
 
 +!stop <- !stop.

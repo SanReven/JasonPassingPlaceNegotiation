@@ -180,7 +180,7 @@ vision_dist(3).
 +!reverse : road(_,_,occupied(N),_) & resolving_with(D) & not N=D
     <- .wait(500);
         ?facing(Dir);
-        check_behind(Dir);
+        check_behind(1, Dir);
         !reverse.
 
 +!reverse : road(_,_,_,has_pass(left)) & pass(X,Y,free,_)
@@ -217,7 +217,7 @@ vision_dist(3).
 
 +!reverse 
     <-  ?facing(Dir);
-        check_behind(Dir);
+        check_behind(1, Dir);
         !reverse.
 
 +!stop <- !stop.

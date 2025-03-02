@@ -196,8 +196,9 @@ public class Env extends Environment {
                 checkAhead(agName, dist, facing);
             } else if (action.getFunctor().equals("check_behind")) {
                 //Turn the direction to the opposite
-                Direct facing = Direct.valueOf((action.getTerm(0)).toString());
-                checkBehind(agName, facing);
+                int dist = (int)((NumberTerm)action.getTerm(0)).solve();
+                Direct facing = Direct.valueOf((action.getTerm(1)).toString());
+                checkBehind(agName, dist, facing);
             } else if (action.getFunctor().equals("pullin")) {
                 int x = (int)((NumberTerm)action.getTerm(0)).solve();
                 int y = (int)((NumberTerm)action.getTerm(1)).solve();
@@ -280,7 +281,7 @@ public class Env extends Environment {
         }
     }
 
-    public void checkBehind(String agName, Direct facing) throws Exception {
+    public void checkBehind(String agName, int viewDist, Direct facing) throws Exception {
         Location agLoc = model.getAgPos(agentNameIdDict.get(agName));
         
         clearPercepts(agName);
@@ -290,9 +291,11 @@ public class Env extends Environment {
             coef = -1;
         }
 
-        checkLocation(agLoc.x + coef, agLoc.y, agName, (coef * (-1)));
-        checkLocation(agLoc.x + coef, agLoc.y + 1, agName, (coef * (-1)));
-        checkLocation(agLoc.x + coef, agLoc.y - 1, agName, (coef * (-1)));
+        for (int i = 1; i < viewDist + 1; i++) {
+            checkLocation(agLoc.x + coef, agLoc.y, agName, (coef * (-1)));
+            checkLocation(agLoc.x + coef, agLoc.y + 1, agName, (coef * (-1)));
+            checkLocation(agLoc.x + coef, agLoc.y - 1, agName, (coef * (-1)));
+        }
     }
 
     public void checkLocation(int x, int y, String agName, int directionCoef) throws Exception {
@@ -590,8 +593,8 @@ public class Env extends Environment {
                     add(PASS, 10, 2);
                     break;
                 case 201:
-                    addDriver(0, 0, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
                 case 202:
