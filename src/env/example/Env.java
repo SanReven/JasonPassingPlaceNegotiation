@@ -250,7 +250,7 @@ public class Env extends Environment {
             if(model.hasObject(PASS, agLoc.x, 0)) {
                 Literal pass = Literal.parseLiteral("last_pass(" + agLoc.x + "," + agLoc.y + ",free," + "has_pass(left)" + ")");
                 addPercept(agName, pass);
-            } else if (model.hasObject(PASS, agLoc.x, agLoc.y - 1)){
+            } else if (model.hasObject(PASS, agLoc.x, 2)){
                 Literal pass = Literal.parseLiteral("last_pass(" + agLoc.x + "," + agLoc.y + ",free," + "has_pass(right)" + ")");
                 addPercept(agName, pass);
             }
@@ -598,65 +598,76 @@ public class Env extends Environment {
                     add(PASS, RoadSize/2, 0);
                     break;
                 case 202:
-                    addDriver(0, 0, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
                     add(PASS, 2, 0);
                     break;
                 case 203:
-                    addDriver(0, 0, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
                     add(PASS, 2, 2);
                     break;
+                case 204:
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
+                    add(PASS, 10, 2);
+                    break;
                 case 205:
-                    addDriver(0, 0, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
                     add(PASS, 10, 0);
                     add(PASS, 2, 0);
                 break;
                 case 206:
-                    addDriver(0, 0, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
+                    break;
+                case 207:
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverquestion2", Direct.left);
+                    addDriver(2, RoadSize - 1, 1, "driverquestion3", Direct.left);
+                    add(PASS, RoadSize/2, 0);
                     break;
                 case 208:
-                    addDriver(0, 0, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "drivercomm2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "drivercomm3", Direct.left);
+                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverquestion2", Direct.left);
+                    addDriver(2, RoadSize - 1, 1, "driverquestion3", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
                 case 209:
-                    addDriver(0, 2, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
-                    addDriver(2, 0, 1, "drivercomm3", Direct.right);
+                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
+                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
                     add(PASS, 2, 0);
                     break;
                 case 210:
-                    addDriver(0, 2, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
-                    addDriver(2, 0, 1, "drivercomm3", Direct.right);
+                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
+                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
                     add(PASS, 5, 0);
                     add(PASS, 3, 0);
                     add(PASS, 9, 2);
                     break;
                 case 211:
-                    addDriver(0, 2, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
-                    addDriver(2, 0, 1, "drivercomm3", Direct.right);
-                    addDriver(3, RoadSize - 3, 1, "drivercomm4", Direct.left);
+                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
+                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
+                    addDriver(3, RoadSize - 3, 1, "driverquestion4", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
                 case 212:
-                    addDriver(0, 2, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "drivercomm2", Direct.left);
-                    addDriver(2, 0, 1, "drivercomm3", Direct.right);
-                    addDriver(3, RoadSize - 1, 1, "drivercomm4", Direct.left);
+                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverquestion2", Direct.left);
+                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
+                    addDriver(3, RoadSize - 1, 1, "driverquestion4", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     add(PASS, 2, 0);
                     add(PASS, 10, 2);
                     break;
                 case 213:
-                    addDriver(0, 2, 1, "drivercomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "drivercomm2", Direct.left);
-                    addDriver(2, 0, 1, "drivercomm3", Direct.right);
+                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
+                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
                     add(PASS, 2, 2);
                     break;
                 //Default: 2 cars, PASS in middle to left of d1.

@@ -26,7 +26,7 @@ vision_dist(3).
 +last_pass(_,_,_,_)
     <-  -last_pass(_);
         .print("PASSING PLACE OBTAINED");
-        +last_pass(0).
+        +pass_found(0).
 
 
 +flashing
@@ -60,11 +60,12 @@ vision_dist(3).
         !drive.
 
 
-+!drive : road(_,_,free,_) & last_pass(_)
++!drive : road(_,_,free,_) & pass_found(_)
     <-  ?facing(Dir);
         move_forward(Dir);
-        ?last_pass(Dist);
-        +last_pass(Dist + 1);
+        ?pass_found(Dist);
+        -pass_found(_);
+        +pass_found(Dist + 1);
         !drive.
 
 
@@ -85,9 +86,15 @@ vision_dist(3).
     <-  -resolving_with(_);
         ?pos(_,X,Y);
         //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
-        +last_pass(0).
+        +pass_found(0).
 
 //FLASHED ACTIONS : RESOLVE
++!resolve : flashed & in_pass(_)
+    <-  .print("Flashed while in pass. Ignoring.");
+        -flashed;
+        !resolve.
+
+
 +!resolve : flashed & pass(_,_,free,left)
     <-  +crawl_forward(leftPas);
         -flashed;
@@ -113,7 +120,7 @@ vision_dist(3).
         !resolve.
 
 +!resolve : flashed & not road(_,_,occupied(_),_)
-    <-  .print("No drivers ahead after being flashed. Resuming...")
+    <-  .print("No drivers ahead after being flashed. Resuming...");
         -flashed.
 
 +!resolve : flashed_checked_behind & road(_,_,occupied(Driver),_)
@@ -139,7 +146,8 @@ vision_dist(3).
 //If the agent decided to reverse and wait, and the driver ahead was still waiting, the agent will end up here.
 //The agent will flash the other driver to follow them and reverse.
 +!resolve : checking_driver_behind & about_to_reverse
-    <-  .print("I am about to reverse. Flashing other to follow");
+    <-  -checking_driver_behind;
+        .print("I am about to reverse. Flashing other to follow");
         ?resolving_with(Driver);
         .send(Driver,tell,flashing);
         !reverse;
@@ -159,20 +167,32 @@ vision_dist(3).
 
 //No driver behind, known passing place.
 //The agent waits to see if the other reverses first, and so goes back to resolve. If the other person still waits, it will come back here, but now to the "about_to_reverse" option above.
-+!resolve : checking_driver_behind & last_pass(Dist)
++!resolve : checking_driver_behind & pass_found(Dist)
     <-  -checking_driver_behind;
-        .send("I know a passing place behind. Waiting to see if other reverses.");
-        wait(Dist * 500);
+        .print("I know a passing place behind. Waiting to see if other reverses.");
+        .wait(Dist * 200);
+        //Also wait a random amount of time. MOVE THIS LATER TO A MORE COMMON ACTION
+        .random(Rand);
+        .wait(Rand * 1000);
         +about_to_reverse;
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis,Dir);
         !resolve.
 
 //No driver behind, but no known passing place.
 //The agent waits to see if the other reverses first, and so goes back to resolve. If the other person still waits, it will come back here, but now to the "about_to_reverse" option above.
 +!resolve : checking_driver_behind
     <-  -checking_driver_behind;
-        .send("I haven't seen any passing place. Waiting to see if other reverses.");
-        wait(5000);
+        .print("I haven't seen any passing place. Waiting to see if other reverses.");
+        .wait(2000);
+        //Also wait a random amount of time. MOVE THIS LATER TO A MORE COMMON ACTION
+        .random(Rand);
+        .wait(Rand * 100);
         +about_to_reverse;
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis,Dir);
         !resolve.
 
 
@@ -257,7 +277,7 @@ vision_dist(3).
     
 
 //If standing right next to pass
-+!resolve : last_pass(0)
++!resolve : pass_found(0)
     <-  ?facing(Dir);
         ?vision_dist(Vis);
         move_backward(Dir);
@@ -280,6 +300,10 @@ vision_dist(3).
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
         !resolve.
+
++!reverse : flashed
+    <-  -flashed;
+        .print("I have been flashed while reversing! Resuming resolving...").
 
 +!reverse : road(_,_,occupied(New),_) & resolving_with(Driver) & not New=Driver
     <- .wait(500);
@@ -316,14 +340,14 @@ vision_dist(3).
         check_ahead(Vis, Dir);
         !reverse.
 
-+!reverse : +reversing_past_pass(0)
++!reverse : reversing_past_pass(0)
     <-  -reversing_past_pass(_);
         .wait(1000);
         !waiting_for_pass.
 
-+!reverse : +reversing_past_pass(Dist)
-    <-  -reversing_past_pass(Dist)
-        +reversing_past_pass(Dist - 1)
++!reverse : reversing_past_pass(Dist)
+    <-  -reversing_past_pass(Dist);
+        +reversing_past_pass(Dist - 1);
         ?facing(Dir);
         move_backward(Dir);
         check_behind(1, Dir);
@@ -351,14 +375,14 @@ vision_dist(3).
         !reverse.
 
 +!waiting_for_pass : pass(_,_,free,_)
-    <-  .print("Passing place freed up! Resuming resolving scenario.");
+    <-  .print("Passing place freed up! Resuming resolving scenario.").
 
 //REVISIT: Possibly do something about free road here too.
 
 +!waiting_for_pass
     <-  ?facing(Dir);
         ?vision_dist(Vis);
-        check_ahead(Vis, Dist);
+        check_ahead(Vis, Dir);
         .wait(500);
         !waiting_for_pass.
 

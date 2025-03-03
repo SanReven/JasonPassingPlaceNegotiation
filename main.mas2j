@@ -59,7 +59,7 @@ Moving:
 MAS main {
 
     //(world option number, number of agents)
-    environment: example.Env(201,2)
+    environment: example.Env(205,2)
 
     agents: //driver #3;
             //player #1;
