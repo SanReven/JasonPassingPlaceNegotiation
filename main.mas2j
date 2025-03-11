@@ -59,12 +59,12 @@ Moving:
 MAS main {
 
     //(world option number, number of agents)
-    environment: example.Env(205,2)
+    environment: example.Env(210,3)
 
     agents: //driver #3;
             //player #1;
             //drivercomm #4;
-            driverquestion #2;
+            driverquestion #3;
 
     aslSourcePath: "src/agt";
 }

@@ -329,7 +329,7 @@ public class Env extends Environment {
             }
             Literal road = Literal.parseLiteral("road(" + x + "," + y + "," + occupied + "," + pass + ")");
             addPercept(agName, road);
-            logger.info(road.toString());
+            //logger.info(road.toString());
         } else if (model.hasObject(PASS, x, y)) {
             //If facing left, a pass on the left should be (2 + (- 1)). If facing right, a pass on the left should be (0 + 1).
             if ((y + directionCoef) == 1) {
@@ -340,7 +340,7 @@ public class Env extends Environment {
 
             Literal road = Literal.parseLiteral("pass(" + x + "," + y + "," + occupied + "," + pass + ")");
             addPercept(agName, road);
-            logger.info(road.toString());
+            //logger.info(road.toString());
         } else {
             ;
             //Add no percept for now.

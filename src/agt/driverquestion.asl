@@ -17,6 +17,8 @@ vision_dist(3).
 
 
 
+
+
 /*Convert initial percepts into beliefs*/
 +facing(Dir)[source(A)] : not my_name(A) <- +facing(Dir).
 
@@ -34,6 +36,10 @@ vision_dist(3).
         .print("I GOT FLASHED!");
         +flashed.
 
++reverse_lights
+    <- -reverse_lights;
+        .print("DRIVER AHEAD REVERSING!");
+        +driver_ahead_reversing.
 
 //Basic plans for driving, remembering passing places, negotiating passing places
 
@@ -49,15 +55,49 @@ vision_dist(3).
         remove_me;
         .kill_agent(A).
 
-+!drive : road(_,_,occupied(Driver),_)
+
+//LOGIC FOR WHEN ENCOUNTERING ANOTHER VEHICLE.
+
++!drive : road(_,_,occupied(Driver),_) & driver_ahead_reversing
+    <-  -following(Driver);
+        !resolve;
+        !drive.
+
+
++!drive : road(_,_,occupied(Driver),_) & following(Driver)
+    <-  .wait(1000);
+        !drive.
+
+
++!drive : road(_,_,occupied(Driver),_) & facing(Dir) & other_facing(Dir)
+    <-  .wait(500);
+        +following(Driver);
+        -other_facing(_);
+        .print("I will begin following!");
+        //move_forward(Dir);
+        !drive.
+
++!drive : road(_,_,occupied(Driver),_) & other_facing(_)
     <-  .wait(500);
         +resolving_with(Driver);
+        -other_facing(_);
         ?vision_dist(Vis);
         ?facing(Dir);
         check_ahead(Vis,Dir);
+        //Random wait time
+        .random(Rand);
+        .wait(Rand * 200);
         !resolve;
         .print("SUCCESSFULLY RESUMED DRIVING");
         !drive.
+
++!drive : road(_,_,occupied(Driver),_)
+    <-  .send(Driver, askOne, facing(Dir), OtherDir, 500);
+        //Even if this results in timeout, the agent will proceed to treat the other agent as oncoming.
+        +other_facing(OtherDir);
+        ?facing(Dir);
+        !drive.
+
 
 
 +!drive : road(_,_,free,_) & pass_found(_)
@@ -87,6 +127,36 @@ vision_dist(3).
         ?pos(_,X,Y);
         //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         +pass_found(0).
+
+//DRIVER AHEAD REVERSING ACTIONS: RESOLVE.
+
+
+//RETURN TO THIS
++!resolve : driver_ahead_reversing & not road(_,_,occupied(_),_)
+    <-  -driver_ahead_reversing;
+        !resolve.
+
+//RETURN TO THIS
++!resolve : driver_ahead_reversing & last_pass(0)
+    <-  -driver_ahead_reversing;
+        ?facing(Dir);
+        move_backward(Dir);
+        !resolve.
+
+
+//RETURN TO THIS
++!resolve : driver_ahead_reversing & pass(_,_,free,_)
+    <-  -driver_ahead_reversing;
+        ?facing(Dir);
+        move_backward(Dir);
+        !resolve.
+
++!resolve : driver_ahead_reversing
+    <-  -driver_ahead_reversing;
+        !reverse;
+        !resolve.
+
+
 
 //FLASHED ACTIONS : RESOLVE
 +!resolve : flashed & in_pass(_)
@@ -172,8 +242,8 @@ vision_dist(3).
         .print("I know a passing place behind. Waiting to see if other reverses.");
         .wait(Dist * 200);
         //Also wait a random amount of time. MOVE THIS LATER TO A MORE COMMON ACTION
-        .random(Rand);
-        .wait(Rand * 1000);
+        //.random(Rand);
+        //.wait(Rand * 1000);
         +about_to_reverse;
         ?facing(Dir);
         ?vision_dist(Vis);
@@ -187,8 +257,8 @@ vision_dist(3).
         .print("I haven't seen any passing place. Waiting to see if other reverses.");
         .wait(2000);
         //Also wait a random amount of time. MOVE THIS LATER TO A MORE COMMON ACTION
-        .random(Rand);
-        .wait(Rand * 100);
+        //.random(Rand);
+        //.wait(Rand * 100);
         +about_to_reverse;
         ?facing(Dir);
         ?vision_dist(Vis);
@@ -229,8 +299,8 @@ vision_dist(3).
         !resolve.
 
 
-
-+!resolve : not_arrived_yet(Driver) & road(_,_,occupied(Driver),_)
+//ORIGINALLY HAD occupied(Driver) IN HERE WHICH CAUSED DEADLOCKS. REVISIT IF NOT WORKING.
++!resolve : not_arrived_yet(Driver) & road(_,_,occupied(_),_)
     <-  -not_arrived_yet(Driver);
         .wait(500);
         !resolve.
