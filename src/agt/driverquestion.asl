@@ -3,6 +3,7 @@
 
 /* Initial beliefs and rules */
 vision_dist(3).
+//This is to differentiate between initial facing dir and other agents' facing dir.
 
 
 /* Initial goals */
@@ -17,10 +18,20 @@ vision_dist(3).
 
 
 
-
++facing(OtherDir)[source(A)] : not my_name(A) & expecting_response
+    <-  +other_facing(OtherDir);
+        ?init_face(MyDir);
+        -facing(_);
+        +facing(MyDir);
+        .print("DRIVER AHEAD GOING THIS WAY: ");
+        .print(OtherDir);
+        -expecting_response.
 
 /*Convert initial percepts into beliefs*/
-+facing(Dir)[source(A)] : not my_name(A) <- +facing(Dir).
++facing(Dir)[source(A)] : not my_name(A)
+    <-  +facing(Dir);
+        //Backup of facing direction
+        +init_face(Dir).
 
 +roadEnd(X,Y)[source(A)] : not my_name(A) <- +roadEnd(X,Y).
 
@@ -69,7 +80,7 @@ vision_dist(3).
         !drive.
 
 
-+!drive : road(_,_,occupied(Driver),_) & facing(Dir) & other_facing(Dir)
++!drive : road(_,_,occupied(Driver),_) & other_facing(Dir) & facing(Dir)
     <-  .wait(500);
         +following(Driver);
         -other_facing(_);
@@ -91,11 +102,13 @@ vision_dist(3).
         .print("SUCCESSFULLY RESUMED DRIVING");
         !drive.
 
++!drive : road(_,_,occupied(Driver),_) & expecting_response
+    <-  .wait(500);
+        !drive.
+
 +!drive : road(_,_,occupied(Driver),_)
-    <-  .send(Driver, askOne, facing(Dir), OtherDir, 500);
-        //Even if this results in timeout, the agent will proceed to treat the other agent as oncoming.
-        +other_facing(OtherDir);
-        ?facing(Dir);
+    <-  +expecting_response;
+        .send(Driver, askOne, facing(Dir));
         !drive.
 
 
@@ -122,6 +135,12 @@ vision_dist(3).
 
 +!drive <- !drive.
 
+-opposite_pass
+    <-  -resolving_with(_);
+        ?pos(_,X,Y);
+        //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
+        +pass_found(0).
+
 -in_pass(_)
     <-  -resolving_with(_);
         ?pos(_,X,Y);
@@ -130,35 +149,40 @@ vision_dist(3).
 
 //DRIVER AHEAD REVERSING ACTIONS: RESOLVE.
 
-
+/*
 //RETURN TO THIS
 +!resolve : driver_ahead_reversing & not road(_,_,occupied(_),_)
     <-  -driver_ahead_reversing;
-        !resolve.
+        !resolve.*/
 
+/*
 //RETURN TO THIS
 +!resolve : driver_ahead_reversing & last_pass(0)
     <-  -driver_ahead_reversing;
         ?facing(Dir);
         move_backward(Dir);
-        !resolve.
+        !resolve.*/
 
-
+/*
 //RETURN TO THIS
 +!resolve : driver_ahead_reversing & pass(_,_,free,_)
     <-  -driver_ahead_reversing;
         ?facing(Dir);
         move_backward(Dir);
-        !resolve.
+        !resolve.*/
 
 +!resolve : driver_ahead_reversing
-    <-  -driver_ahead_reversing;
-        !reverse;
+    <-  !reverse;
         !resolve.
 
 
 
 //FLASHED ACTIONS : RESOLVE
++!resolve : flashed & opposite_pass
+    <-  .print("Flashed while opposite pass. Ignoring.");
+        -flashed;
+        !resolve.
+
 +!resolve : flashed & in_pass(_)
     <-  .print("Flashed while in pass. Ignoring.");
         -flashed;
@@ -288,7 +312,7 @@ vision_dist(3).
 +!resolve : crawl_forward(rightPas) & road(X,_,free,has_pass(right)) 
     <-  ?facing(Dir);
         move_forward(Dir);
-        +in_pass(right);
+        +opposite_pass;
         -crawl_forward(rightPas);
         !resolve.
 
@@ -311,17 +335,24 @@ vision_dist(3).
         check_ahead(Vis, Dir);
         !resolve.
 
-+!resolve : in_pass(left) & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
++!resolve : in_pass(_) & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
     <-  ?facing(Dir);
-        -in_pass(left);
+        -in_pass(_);
         pullout(Dir);
         -resolving_with(Driver);
         .print("RESUMING DRIVING").
 
-+!resolve : in_pass(right) & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
-    <- -in_pass(right);
++!resolve : opposite_pass & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
+    <-  -opposite_pass;
         -resolving_with(Driver);
         .print("RESUMING DRIVING").
+
+
++!resolve : opposite_pass
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !resolve.
 
 +!resolve : in_pass(_)
     <-  ?facing(Dir);
@@ -371,6 +402,12 @@ vision_dist(3).
         check_ahead(Vis, Dir);
         !resolve.
 
+
+
+
+
+
+
 +!reverse : flashed
     <-  -flashed;
         .print("I have been flashed while reversing! Resuming resolving...").
@@ -378,6 +415,14 @@ vision_dist(3).
 +!reverse : road(_,_,occupied(New),_) & resolving_with(Driver) & not New=Driver
     <- .wait(500);
         ?facing(Dir);
+        check_behind(1, Dir);
+        !reverse.
+
++!reverse : driver_ahead_reversing & road(_,_,_,has_pass(_))
+    <-  -driver_ahead_reversing;
+        +reversing_past_pass(2);
+        ?facing(Dir);
+        move_backward(Dir);
         check_behind(1, Dir);
         !reverse.
 
@@ -391,22 +436,34 @@ vision_dist(3).
 
         
 
-+!reverse : in_pass(right) & road(_,_,occupied(_),_)
++!reverse : opposite_pass & road(_,_,occupied(_),_)
     <- .wait(500).
 
 //This should just wait for the other driver to catch up and go back to resolve mode.
-+!reverse : in_pass(right) 
++!reverse : opposite_pass
+    <-  ?resolving_with(Driver);
+        +waiting_for(Driver);
+        +not_arrived_yet(Driver).
+
++!reverse : opposite_pass
     <-  ?resolving_with(Driver);
         +waiting_for(Driver);
         +not_arrived_yet(Driver).
 
 //REVISIT THIS BASED ON QUESTIONNAIRE RESULTS.
 //If there is a pass on the right, move back 1 space to be parallel and let the other catch up. Go back to 
-+!reverse : road(X,_,_,has_pass(right)) & not pass(X,_,occupied(_),_)
++!reverse : road(X,_,_,has_pass(right)) & pass(X,Y,free,_)
+    <-  pullin(X,Y);
+        ?resolving_with(Driver);
+        +waiting_for(Driver);
+        +not_arrived_yet(Driver);
+        +in_pass(right).
+
++!reverse : road(X,_,_,has_pass(right))
     <-  ?facing(Dir);
         ?vision_dist(Vis);
         move_backward(Dir);
-        +in_pass(right);
+        +opposite_pass;
         check_ahead(Vis, Dir);
         !reverse.
 
