@@ -17,15 +17,36 @@ vision_dist(3).
 +!start <- !start.
 
 
-
 +facing(OtherDir)[source(A)] : not my_name(A) & expecting_response
-    <-  +other_facing(OtherDir);
+    <-  .print("Receieved response for my facing direction request");
+        -expecting_response;
+        ?init_face(MyDir);
+        if (OtherDir = MyDir) {
+            +other_facing(same);
+        } else {
+            +other_facing(opposite);
+        };
+        -facing(_);
+        +facing(MyDir);
+        .print("DRIVER AHEAD GOING THIS WAY: ");
+        .print(OtherDir);
+        .print("I AM GOING THIS WAY: ");
+        .print(MyDir).
+
+
+/*
++facing(OtherDir)[source(A)] : not my_name(A) & expecting_response
+    <-  .print("Receieved request for my facing direction");
+        -expecting_response;
+        +other_facing(OtherDir);
         ?init_face(MyDir);
         -facing(_);
         +facing(MyDir);
         .print("DRIVER AHEAD GOING THIS WAY: ");
         .print(OtherDir);
-        -expecting_response.
+        .print("I AM GOING THIS WAY: ");
+        .print(MyDir).
+*/
 
 /*Convert initial percepts into beliefs*/
 +facing(Dir)[source(A)] : not my_name(A)
@@ -69,6 +90,13 @@ vision_dist(3).
 
 //LOGIC FOR WHEN ENCOUNTERING ANOTHER VEHICLE.
 
+//While driving and there is a driver ahead and I am waiting for a response from the driver ahead to see which way they are facing via the plan below.
+//I will keep waiting.
++!drive : road(_,_,occupied(Driver),_) & expecting_response
+    <-  .wait(500);
+        .print("Waiting to see which way other is driving");
+        !drive.
+
 //While driving and there is another driver ahead that I know is reversing.
 //I will stop following the driver, and instead begin resolving. This will make me go to reverse immediately.
 +!drive : road(_,_,occupied(Driver),_) & driver_ahead_reversing
@@ -79,18 +107,21 @@ vision_dist(3).
 //While driving and there is another driver ahead that I am already following
 //I will wait a second then continue driving.
 +!drive : road(_,_,occupied(Driver),_) & following(Driver)
-    <-  .wait(1000);
+    <-  .wait(500);
+        ?vision_dist(Vis);
+        ?facing(Dir);
+        check_ahead(Vis,Dir);
         !drive.
 
 //While driving and there is another driver ahead and we are both facing the same way.
 //I will begin following the driver ahead and keep driving.
-+!drive : road(_,_,occupied(Driver),_) & other_facing(Dir) & facing(Dir)
++!drive : road(_,_,occupied(Driver),_) & other_facing(same)
     <-  .wait(500);
         +following(Driver);
         -other_facing(_);
         .print("I will begin following!");
-        //RETURN TO THIS
-        //move_forward(Dir);
+        ?facing(Dir);
+        move_forward(Dir);
         !drive.
 
 //While driving and there is another driver ahead that is facing towards me.
@@ -110,17 +141,13 @@ vision_dist(3).
         .print("SUCCESSFULLY RESUMED DRIVING");
         !drive.
 
-//While driving and there is a driver ahead and I am waiting for a response from the driver ahead to see which way they are facing via the plan below.
-//I will keep waiting.
-+!drive : road(_,_,occupied(Driver),_) & expecting_response
-    <-  .wait(500);
-        !drive.
 
 //When driving and encountering another driver ahead.
 //Check whether they are an oncoming driver, or I have caught up to a driver going the same way.
 //I do this by sending them a message and ask them about their belief of which way they are facing. I expect them to send their facing(Dir) belief back.
 +!drive : road(_,_,occupied(Driver),_)
-    <-  +expecting_response;
+    <-  .print("Checking which way other driver is facing");
+        +expecting_response;
         .send(Driver, askOne, facing(Dir));
         !drive.
 
@@ -164,6 +191,116 @@ vision_dist(3).
         ?pos(_,X,Y);
         //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         +pass_found(0).
+
+
+/*
+
+//HIGHER ORDER LOGIC RESOLVING PLANS
+//This state should be entered as a means of attempting to communicate with the other driver in a more complex manner.
+//Entered when flashing the other driver and getting flashed at the same time.
+//REVIEW THE CONDITIONS FOR ALL OF THESE
+
+//HOL: If the road ahead is clear, resume resolving and then driving.
++!higher_order : road(_,_,_,_) & not road(_,_,occupied(_),_)
+    <-  .wait(500);
+        -awaiting_higher_response;
+        -breaking_stalemate.
+
+//HOL: If other agent told me to follow them, resume resolving and then driving.
++!higher_order : follow_me
+    <-  -follow_me;
+        -awaiting_higher_response.
+
+//FOR LATER
+//+!higher_order : awaiting_higher_response & other_can_reverse(X) & driver_behind
+
+
+//HOL: While awaiting response for breaking stalemate, once received other person's random number, compare and act accordingly.
+//If their random number is higher, I will reverse. If it is equal, we must roll again. Otherwise, I will go back to resolving.
++!higher_order : awaiting_higher_response + breaking_stalemate + other_random_number(X)
+    <-  ?my_random_number(Y);
+        -breaking_stalemate;
+        if (X>Y) {
+            //I should reverse.
+            ?resolving_with(Driver);
+            .send(Driver,tell,follow_me);
+            -awaiting_higher_response;
+            !reverse;
+        } else {
+            if (X=Y) {
+                //We need to reroll. Going back to higher_order:breaking_stalemate.
+                -awaiting_higher_response;
+                +breaking_stalemate
+                !higher_order;
+            } else {
+                //They should reverse. I will wait and go back to resolving.
+                .wait(500);
+                -awaiting_higher_response;
+            };
+        }.
+
+
+//HOL: While awaiting response for breaking stalemate, and not yet received other person's random number, wait.
++!higher_order : awaiting_higher_response + breaking_stalemate
+    <-  .wait(500);
+        !higher_order.
+
+
+//HOL: If other says they can reverse and I can too, compare the distance from pass.
+//If I am closer, I reverse. If we are at same distance, we will begin breaking stalemate. If they are closer, I will wait.
++!higher_order : awaiting_higher_response & other_can_reverse(X) & last_pass(Y)
+    <-  if (X>Y) {
+            //I should reverse.
+            ?resolving_with(Driver);
+            .send(Driver,tell,follow_me);
+            -awaiting_higher_response;
+            !reverse;
+        } else {
+            if (X=Y) {
+                //We need to decide who should reverse. They should come to this conclusion and give this belief to themselves too.
+                +breaking_stalemate;
+                -awaiting_higher_response;
+                !higher_order;
+            } else {
+                //They should reverse. I will wait and go back to resolving.
+                .wait(500);
+                -awaiting_higher_response;
+            };
+        }.
+
+
+//HOL: While awaiting other agent's response, keep waiting.
+//Plans based on received responses or breaking out of waiting should go above here.
++!higher_order : awaiting_higher_response
+    <-  .wait(500);
+        +!higher_order.
+
+//HOL: If needing to break a stalemate, save a random number and send it to the other driver. Await their random number as well.
++!higher_order : breaking_stalemate
+    <-  .random(Rand);
+        +my_random_number(Rand);
+        ?resolving_with(Driver);
+        .send(Driver,tell,other_random_number(Rand));
+        +awaiting_higher_response;
+        +!higher_order.
+
+
+//HOL: If there is a known passing behind and there is no driver behind.
+//Tell the other that I can reverse and it is X spaces away from me. Also make sure I await their response.
+//NEED TO FILL GAP: when receiving other_can_reverse but not awaiting higher response.
++!higher_order : last_pass(X) & not driver_behind
+    <-  ?resolving_with(Driver);
+        .send(Driver,tell,other_can_reverse(X));
+        +awaiting_higher_response;
+        +!higher_order.
+
+//NEED TO ADD SOMETHING HERE FOR THE FAILSAFE.
++!higher_order
+    <- .wait(500).
+
+
+*/
+
 
 //DRIVER AHEAD REVERSING ACTIONS: RESOLVE.
 
@@ -285,7 +422,6 @@ vision_dist(3).
         !reverse;
         !resolve.
 
-
 //Driver behind found. Flashing other person to reverse.
 +!resolve : checking_driver_behind & road(_,_,occupied(Behind),_)
     <-  -checking_driver_behind;
@@ -295,7 +431,7 @@ vision_dist(3).
         .print("Driver found behind...flashing other driver");
         .send(Driver,tell,flashing);
         //REVISIT. Possibly add +wait_for_other_reverse here.
-        .wait(3000).
+        .wait(1000).
 
 //No driver behind, known passing place.
 //The agent waits to see if the other reverses first, and so goes back to resolve. If the other person still waits, it will come back here, but now to the "about_to_reverse" option above.
@@ -312,9 +448,10 @@ vision_dist(3).
         check_ahead(Vis,Dir);
         !resolve.
 
+
 //No driver behind, but no known passing place.
 //The agent waits to see if the other reverses first, and so goes back to resolve. If the other person still waits, it will come back here, but now to the "about_to_reverse" option above.
-+!resolve : checking_driver_behind
++!resolve : checking_driver_behind & not road(_,_,occupied(Behind),_) & not pass_found(Dist)
     <-  -checking_driver_behind;
         .print("I haven't seen any passing place. Waiting to see if other reverses.");
         .wait(2000);
@@ -326,6 +463,12 @@ vision_dist(3).
         ?vision_dist(Vis);
         check_ahead(Vis,Dir);
         !resolve.
+
++!resolve : checking_driver_behind
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_behind(Vis,Dir);
+        .wait(1000).
 
 
 
@@ -454,6 +597,7 @@ vision_dist(3).
 +!resolve : not road(_,_,_,has_pass(_)) & road(_,_,occupied(_),_)
     <-  .print("Someone has to reverse. Checking if driver behind...");
         +checking_driver_behind;
+        .wait(2000);
         ?facing(Dir);
         ?vision_dist(Vis);
         check_behind(Vis, Dir);
