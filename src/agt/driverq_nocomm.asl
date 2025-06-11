@@ -21,6 +21,7 @@ vision_dist(3).
 
 +roadEnd(X,Y)[source(A)] : not my_name(A) <- +roadEnd(X,Y).
 
+
 /*Convert passing place percept into belief*/
 +last_pass(_,_,_,_)
     <-  -last_pass(_);
@@ -213,7 +214,7 @@ vision_dist(3).
     <- -crawl_forward(leftPas);
         ?facing(Dir);
         ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
+        check_ahead(1, Dir);
         .wait(500);
         !resolve.
 
@@ -231,7 +232,7 @@ vision_dist(3).
     <- -crawl_forward(rightPas);
         ?facing(Dir);
         ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
+        check_ahead(1, Dir);
         .wait(500);
         !resolve.
 
