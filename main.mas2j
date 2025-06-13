@@ -7,7 +7,7 @@
     This file defines the initial state of the MAS
 
     Jason 3.2.0
-    május 05, 2024 - 04:55:50
+    May 05, 2024 - 04:55:50
 */
 
 /*World types:
@@ -40,20 +40,42 @@ Moving:
 
 
 101-106: 1 player 1 driver.
-    1: PP in middle to left of player. (Q4 Scenario)
-    2: PP behind to left of player.
-    3: PP behind to right of player. (Q5 Scenario)
+    1: PP in middle to left of player. (Q4 Scenario) [SCENARIO 1]
+    2: PP behind to left of player. [SCENARIO 2]
+    3: PP behind to right of player. (Q5 Scenario) [SCENARIO 3]
     4: PP behind to left of player. (Q6 Scenario but D1 CAN reverse)
-    5: PP behind to left of player AND PP behind to the right of player.
+    5: PP behind to left of player AND PP behind to the right of player. [SCENARIO 4]
     6: No PP.
 107-110: 1 player, 2 drivers.
-    7: PP in middle to left of player, extra car behind d1.
-    8: PP in middle to right of player, extra car behind d1. (Q7 Scenario)
-    9: PP behind to left of player, extra car behind player. (Q9 Scenario)
-    10: PP in middle to the left of player AND behind to the left of player AND behind to the left of d1, extra car behind player.
+    7: PP in middle to left of player, extra car behind d1. [SCENARIO 5]
+    8: PP in middle to right of player, extra car behind d1. (Q7 Scenario) [SCENARIO 6]
+    9: PP behind to left of player, extra car behind player. (Q9 Scenario) [SCENARIO 7]
+    10: PP in middle to the left of player AND behind to the left of player AND behind to the left of d1, extra car behind player. [SCENARIO 8]
 111-112: 1 player, 3 drivers.
-    11: PP in middle to right of player. (Q8 Scenario). 1 driver ahead of player, 2 oncoming drivers.
-    12: PP in middle to right of player AND behind to the left of player AND behind to the left of d1. 1 driver ahead of player, 2 oncoming drivers.
+    11: PP in middle to right of player. (Q8 Scenario). 1 driver ahead of player, 2 oncoming drivers. [SCENARIO 9]
+    12: PP in middle to right of player AND behind to the left of player AND behind to the left of d1. 1 driver ahead of player, 2 oncoming drivers. [SCENARIO 10]
+
+
+V1 Questionnaire agents
+201-206: 2 driverquuestion agents.
+207-210, 213: 3 driverquestion agents.
+211-212: 4 driverquestion agents.
+
+
+V2 Questionnaire agents - no communication
+301-304: 2 driverq_nocomm agents.
+305-308: 3 driverq_nocomm agents.
+309-310: 4 driverq_nocomm agents.
+
+V2 Questionnaire agents - primitive communication
+401-404: 2 driverq_comm agents.
+405-408: 3 driverq_comm agents.
+409-410: 4 driverq_comm agents.
+
+V2 Questionnaire agents - higher order logic
+501-504: 2 driverq_hol agents.
+505-508: 3 driverq_hol agents.
+509-510: 4 driverq_hol agents.
 */
 
 MAS main {
