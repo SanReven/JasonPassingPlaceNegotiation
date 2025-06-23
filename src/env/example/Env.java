@@ -315,6 +315,7 @@ public class Env extends Environment {
 
         //If there is an agent there
         if (otherAg >= 0) {
+            //COME BACK HERE
             occupied = "occupied(" + agentNameIdInverse.get(otherAg) + ")";
             agentFound = true;
         }

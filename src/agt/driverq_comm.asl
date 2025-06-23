@@ -21,30 +21,27 @@ starting_up.
 +facing(Dir)[source(A)] : not my_name(A) & starting_up
     <-  +facing(Dir);
         //Backup of facing direction
-        +init_face(Dir);
+        +car_dir(Dir);
         -starting_up.
 
 
 //Handling the response received when asking another vehicle which way they are going.
 //Given that agents use the same "facing" belief, in order to not overwrite this agent's facing, we need to keep a separate init_face to remember our alignment:
 //  At the end of the method, remove all facing beliefs and re-add the facing belief that matches this agent's init_face.
-+facing(OtherDir)[source(A)] : not my_name(A) & expecting_response(_)
-    <-  -expecting_response(_);
++car_dir(OtherDir)[source(A)] : not my_name(A) & expecting_response(_)
+    <-  -car_dir(_);
+        -expecting_response(_);
+        -ask_facing;
+        +car_dir(MyDir);
         .print("Received response for my facing direction request");
-        .wait(500);
-        ?init_face(MyDir);
+        ?facing(MyDir);
         if (OtherDir = MyDir) {
-            +other_facing(same);
-        } else {
-            +other_facing(opposite);
+            +following(A);
         };
-        -facing(_);
-        +facing(MyDir);
         .print("DRIVER AHEAD GOING THIS WAY: ");
         .print(OtherDir);
         .print("I AM GOING THIS WAY: ");
-        .print(MyDir);
-        !resolve.
+        .print(MyDir).
 
 //Initial setting of end of road as belief
 +roadEnd(X,Y)[source(A)] : not my_name(A) <- +roadEnd(X,Y).
@@ -73,10 +70,14 @@ starting_up.
         remove_me;
         .kill_agent(A).
 
-+flashing
+-?reverse : flashed(_)
+    <-  -flashed(_);
+        .print("I got flashed while not in resolve. Removing flash").
+
++flashing[source(A)]
     <- -flashing;
         .print("I GOT FLASHED!");
-        +flashed.
+        +flashed(A).
 
 +reverse_lights
     <- -reverse_lights;
@@ -86,10 +87,10 @@ starting_up.
 
 //LOGIC FOR WHEN ENCOUNTERING ANOTHER VEHICLE.
 
-+!drive : road(_,_,occupied(Driver),_) & ask_facing & expecting_response(_)
+/*+!drive : road(_,_,occupied(Driver),_) & ask_facing & expecting_response(_)
     <-  .print("Still awaiting response...");
         .wait(500);
-        !resolve.
+        !resolve.*/
 
 //While driving and there is another driver ahead that I know is reversing.
 //I will stop following the driver, and instead begin resolving. This will make me go to reverse immediately.
@@ -116,7 +117,7 @@ starting_up.
 +!drive : road(_,_,occupied(Driver),_)
     <-  .wait(500);
         +resolving_with(Driver);
-        //+ask_facing;
+        +ask_facing;
         ?vision_dist(Vis);
         ?facing(Dir);
         check_ahead(Vis,Dir);
@@ -166,7 +167,7 @@ starting_up.
         ?pos(_,X,Y);
         //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         -pass_found(_);
-        +pass_found(0).
+        +pass_found(1).
 
 
 //RESOLVE ACTIONS
@@ -175,7 +176,7 @@ starting_up.
 
 //When the person ahead of me is going the opposite way as me
 //Stop asking, resolve the scenario as normal.
-+!resolve : ask_facing & expecting_response(_) & other_facing(opposite)
+/*+!resolve : ask_facing & expecting_response(_) & other_facing(opposite)
     <-  .print("Other driver is oncoming!!! Resuming resolving scenario");
         -ask_facing;
         -expecting_response(_);
@@ -183,11 +184,11 @@ starting_up.
         ?vision_dist(Vis);
         ?facing(Dir);
         check_ahead(Vis,Dir);
-        !resolve.
+        !resolve.*/
 
 //When the person ahead of me is going the same way as me
 //Stop asking, Begin following the them, and resolve the scenario as so.
-+!resolve : ask_facing & expecting_response(Driver) & other_facing(same)
+/*+!resolve : ask_facing & expecting_response(Driver) & other_facing(same)
     <-  .print("Other driver is going same way!!! Beginning following other driver");
         -ask_facing;
         -expecting_response(_);
@@ -196,33 +197,127 @@ starting_up.
         ?vision_dist(Vis);
         ?facing(Dir);
         check_ahead(Vis,Dir);
-        !resolve.
+        !resolve.*/
     
 //RETURN HERE: ADD A WAY TO ABANDON WAITING AFTER A WHILE.
 //While the person I have asked hasn't responded, keep waiting.
-+!resolve : ask_facing & expecting_response(_) & road(_,_,occupied(Driver),_)
+/*+!resolve : ask_facing & expecting_response(_) & road(_,_,occupied(Driver),_)
     <-  .wait(500);
-        .print("Waiting for response...").
+        .print("Waiting for response...").*/
+
+//If waiting for a driver to arrive and an oncoming driver approaches.
+//Do not wait for the other driver anymore, and wait for the oncoming driver to pass.
++!resolve : not_arrived_yet(Driver) & road(_,_,occupied(_),_)
+    <-  -not_arrived_yet(Driver);
+        .wait(500);
+        !resolve.
+
+//While waiting for driver to arrive and they have not yet arrived.
+//Keep waiting and checking ahead
++!resolve : not_arrived_yet(Driver)
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        .wait(500);
+        check_ahead(Vis, Dir);
+        !resolve.
+
+//If staying in passing place and the road is no longer occupied.
+//Pull out of passing place and resume driving.
++!resolve : in_pass(_) & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
+    <-  ?facing(Dir);
+        -in_pass(_);
+        pullout(Dir);
+        -resolving_with(Driver);
+        .print("RESUMING DRIVING").
+
+//If staying opposite a passing place and the road is no longer occupied.
+//Resume driving.
++!resolve : opposite_pass & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
+    <-  -opposite_pass;
+        -resolving_with(Driver);
+        .print("RESUMING DRIVING").
+
+//If staying opposite a passing place, keep waiting and resolving
++!resolve : opposite_pass
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !resolve.
+
+//If staying in a passing place, keep waiting and resolving.
++!resolve : in_pass(_)
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !resolve.
+
 
 //When resolving with a driver I am about to check for facing, and they are still blocking the road
 //Check which way they are facing by asking for their "facing" belief.
 +!resolve : ask_facing & road(_,_,occupied(Driver),_)
     <-  .print("Checking which way other driver is facing...");
         +expecting_response(Driver);
-        .send(Driver, askOne, facing(Dir));
+        -ask_facing;
+        .send(Driver, askOne, car_dir(Dir));
         .wait(500);
         ?vision_dist(Vis);
         ?facing(Dir);
         check_ahead(Vis,Dir);
         !resolve.
 
++!resolve : flashed(Other) & road(_,_,occupied(Driver),_) & not Other=Driver & pass_found(_)
+    <-  .print("Flashed by driver behind. I will reverse with them.");
+        -flashed;
+        -wait_for(_);
+        -ask_facing;
+        ?facing(Dir);
+        check_behind(1,Dir);
+        !reverse;
+        !resolve.
+
++!resolve : flashed(Driver) & road(_,_,occupied(Driver),_) & pass_found(_)
+    <-  .print("Road is occupied after getting flashed. Will wait to see if other is moving or wants me to move.");
+        -flashed;
+        +wait_for(3);
+        ?vision_dist(Vis);
+        ?facing(Dir);
+        check_ahead(Vis,Dir);
+        !resolve.
+
++!resolve : flashed & road(_,_,free,_)
+    <-  -flashed;
+        -wait_for(_);
+        -ask_facing;
+        .print("Road is clear while flashed. Resuming driving!").
+
+
+
++!resolve : flashed
+    <-  .print("I got flashed while resolving.");
+        .wait(500);
+        ?vision_dist(Vis);
+        ?facing(Dir);
+        check_ahead(Vis,Dir);
+        !resolve.
 
 //RESOLVE: WAITING ACTIONS.
 
 //When the wait timer is up and there is still a driver blocking the way, begin reversing.
 +!resolve : wait_for(0) & road(_,_,occupied(Driver),_)
     <-  .print("No longer waiting. Starting to reverse");
-        -wait_for(0);
+        -wait_for(_);
+        .send(Driver,tell,flashing);
+        ?facing(Dir);
+        check_behind(1, Dir);
+        !reverse;
+        !resolve.
+
+
+
++!resolve : wait_for(0) & road(_,_,occupied(Driver),_)
+    <-  .print("No longer waiting. Flashing other and starting to reverse!");
+        -wait_for(_);
+        .send(Driver,tell,flashing);
         ?facing(Dir);
         check_behind(1, Dir);
         !reverse;
@@ -250,6 +345,7 @@ starting_up.
 +!resolve : driver_ahead_reversing & pass_found(_)
     <-  -driver_ahead_reversing;
         -checking_driver_behind;
+        -wait_for(_);
         ?facing(Dir);
         check_behind(1,Dir);
         .print("Driver ahead of me is reversing towards me. I will reverse as well.");
@@ -266,8 +362,14 @@ starting_up.
 
 
 
++!resolve : resolving_with(Driver) & following(Driver) & pass_found(Dist)
+    <-  .print("Driver ahead of me stopped. I will wait to see if they move again");
+        +wait_for(Dist);
+        ?vision_dist(Vis);
+        ?facing(Dir);
+        check_ahead(Vis,Dir);
+        !resolve.
 
-//FOLLOWING IS NOT IMPLEMENTED AT THE MOMENT. MAY NEED TO RETURN HERE WHEN IT IS.
 //If resolving with another driver that the agent is already following, wait for 5 seconds to see if they move out of the way.
 +!resolve : resolving_with(Driver) & following(Driver)
     <-  .print("Driver ahead of me stopped. I will wait to see if they move again");
@@ -364,51 +466,7 @@ starting_up.
         !resolve.
 
 
-//If waiting for a driver to arrive and an oncoming driver approaches.
-//Do not wait for the other driver anymore, and wait for the oncoming driver to pass.
-+!resolve : not_arrived_yet(Driver) & road(_,_,occupied(_),_)
-    <-  -not_arrived_yet(Driver);
-        .wait(500);
-        !resolve.
 
-//While waiting for driver to arrive and they have not yet arrived.
-//Keep waiting and checking ahead
-+!resolve : not_arrived_yet(Driver)
-    <-  ?facing(Dir);
-        ?vision_dist(Vis);
-        .wait(500);
-        check_ahead(Vis, Dir);
-        !resolve.
-
-//If staying in passing place and the road is no longer occupied.
-//Pull out of passing place and resume driving.
-+!resolve : in_pass(_) & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
-    <-  ?facing(Dir);
-        -in_pass(_);
-        pullout(Dir);
-        -resolving_with(Driver);
-        .print("RESUMING DRIVING").
-
-//If staying opposite a passing place and the road is no longer occupied.
-//Resume driving.
-+!resolve : opposite_pass & road(_,_,_,_) & not road(_,_,occupied(Driver),_)
-    <-  -opposite_pass;
-        -resolving_with(Driver);
-        .print("RESUMING DRIVING").
-
-//If staying opposite a passing place, keep waiting and resolving
-+!resolve : opposite_pass
-    <-  ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        !resolve.
-
-//If staying in a passing place, keep waiting and resolving.
-+!resolve : in_pass(_)
-    <-  ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        !resolve.
 
 //If the road ahead has been cleared up, go back to driving.
 +!resolve : not road(_,_,occupied(_),_)
@@ -558,6 +616,9 @@ starting_up.
 +!reverse : road(_,_,_,_)
     <-  ?facing(Dir);
         move_backward(Dir);
+        ?pass_found(Dist);
+        -pass_found(_);
+        +pass_found(Dist + 1);
         !reverse.
 
 //While reversing with no road percepts, check behind one space.
