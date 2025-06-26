@@ -15,6 +15,7 @@ import jason.environment.grid.Location;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.Dictionary;
 
 //import static java.lang.Math.abs;
 
@@ -46,6 +47,8 @@ public class Env extends Environment {
 
     private HashMap<String, Integer> agentNameIdDict = new HashMap<String, Integer>();
     private HashMap<Integer, String> agentNameIdInverse = new HashMap<Integer, String>();
+
+    
 
     public static final int RoadSize = 13; // Road size
     public static final int ROAD = 16; //To determine where there is road.
@@ -315,7 +318,7 @@ public class Env extends Environment {
 
         //If there is an agent there
         if (otherAg >= 0) {
-            //COME BACK HERE
+            //RETURN HERE. 
             occupied = "occupied(" + agentNameIdInverse.get(otherAg) + ")";
             agentFound = true;
         }
