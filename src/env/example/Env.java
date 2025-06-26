@@ -48,7 +48,7 @@ public class Env extends Environment {
     private HashMap<String, Integer> agentNameIdDict = new HashMap<String, Integer>();
     private HashMap<Integer, String> agentNameIdInverse = new HashMap<Integer, String>();
 
-    
+    private HashMap<String, Env.Direct> agentDirDict = new HashMap<String, Env.Direct>();
 
     public static final int RoadSize = 13; // Road size
     public static final int ROAD = 16; //To determine where there is road.
@@ -318,8 +318,13 @@ public class Env extends Environment {
 
         //If there is an agent there
         if (otherAg >= 0) {
-            //RETURN HERE. 
-            occupied = "occupied(" + agentNameIdInverse.get(otherAg) + ")";
+            //TEMPORARY SOLUTION WITH HASHMAPS. LATER REPLACE THIS WITH GETTING THE AGENT OBJECT AND USING findBel(facing, Dir)
+            //Currently don't know how to get an agent object from string/id.
+            String otherName = agentNameIdInverse.get(otherAg);
+            String facing = agentDirDict.get(otherName).toString();
+            Literal driverDet = Literal.parseLiteral("driver_detected(" + otherName + "," + facing + ")");
+            addPercept(agName, driverDet);
+            occupied = "occupied(" + otherName + ")";
             agentFound = true;
         }
 
@@ -884,6 +889,7 @@ public class Env extends Environment {
                 //Add agent to both hashmaps.
                 agentNameIdDict.put(agName, agID);
                 agentNameIdInverse.put(agID, agName);
+                agentDirDict.put(agName, facing);
 
                 //tell the agent which way it is facing.
                 Literal dir = Literal.parseLiteral("facing(" + facing.toString() + ")");

@@ -22,11 +22,22 @@ starting_up.
     <-  +facing(Dir);
         -starting_up.
 
++driver_detected(Other, Dir)[source(A)] : not my_name(A) <- +driver_detected(Other, Dir).
 
 //Handling the response received when asking another vehicle which way they are going.
 //Given that agents use the same "facing" belief, in order to not overwrite this agent's facing, we need to keep a separate init_face to remember our alignment:
 //  At the end of the method, remove all facing beliefs and re-add the facing belief that matches this agent's init_face.
-+resolving_with(Other) : driver_detected(Other, Dir) & facing(Dir) <- following(Other)
++resolving_with(Other) : driver_detected(Other, OtherDir) & facing(MyDir) & not OtherDir=MyDir
+    <-  .print("DRIVER AHEAD IS ONCOMING!");
+        -driver_detected(_,_).
+
+
++resolving_with(Other) : driver_detected(Other, Dir) & facing(Dir)
+    <-  .print("DRIVER AHEAD IS LEADER!");
+        -driver_detected(_,_);
+        +following(Other).
+
+
 
 //Initial setting of end of road as belief
 +roadEnd(X,Y)[source(A)] : not my_name(A) <- +roadEnd(X,Y).
@@ -273,6 +284,7 @@ starting_up.
 //When waiting and there is no agent blocking the road, stop waiting and resume driving.
 +!resolve : wait_for(X)
     <-  .print("Other driver began moving. I will follow");
+        -flashed;
         -wait_for(X).
 
 //If the driver ahead of me is intending to reverse and I remember a passing place, I will reverse.
