@@ -209,10 +209,20 @@ starting_up.
         check_ahead(Vis, Dir);
         !resolve.
 
++!resolve : flashed(_) & road(_,_,occupied(Driver),_) & pass_found(0)
+    <-  .print("Flashed while next to passing place! Reversing past it!");
+        -flashed(_);
+        -wait_for(_);
+        -ask_facing;
+        +reversing_past_pass(2);
+        ?facing(Dir);
+        check_behind(1,Dir);
+        !reverse;
+        !resolve.
 
 +!resolve : flashed(Other) & road(_,_,occupied(Driver),_) & not Other=Driver & pass_found(_)
     <-  .print("Flashed by driver behind. I will reverse with them.");
-        -flashed;
+        -flashed(_);
         -wait_for(_);
         -ask_facing;
         ?facing(Dir);
@@ -222,22 +232,22 @@ starting_up.
 
 +!resolve : flashed(Driver) & road(_,_,occupied(Driver),_) & pass_found(_)
     <-  .print("Road is occupied after getting flashed. Will wait to see if other is moving or wants me to move.");
-        -flashed;
+        -flashed(_);
         +wait_for(3);
         ?vision_dist(Vis);
         ?facing(Dir);
         check_ahead(Vis,Dir);
         !resolve.
 
-+!resolve : flashed & road(_,_,free,_)
-    <-  -flashed;
++!resolve : flashed(_) & road(_,_,free,_)
+    <-  -flashed(_);
         -wait_for(_);
         -ask_facing;
         .print("Road is clear while flashed. Resuming driving!").
 
 
 
-+!resolve : flashed
++!resolve : flashed(_)
     <-  .print("I got flashed while resolving.");
         .wait(500);
         ?vision_dist(Vis);
@@ -248,7 +258,7 @@ starting_up.
 //RESOLVE: WAITING ACTIONS.
 
 //When the wait timer is up and there is still a driver blocking the way, begin reversing.
-+!resolve : wait_for(0) & road(_,_,occupied(Driver),_)
++!resolve : wait_for(0) & road(_,_,occupied(Driver),_) & pass_found(_)
     <-  .print("No longer waiting. Starting to reverse");
         -wait_for(_);
         .send(Driver,tell,flashing);
@@ -259,14 +269,14 @@ starting_up.
 
 
 
-/*+!resolve : wait_for(0) & road(_,_,occupied(Driver),_)
-    <-  .print("No longer waiting. Flashing other and starting to reverse!");
++!resolve : wait_for(0) & road(_,_,occupied(Driver),_)
+    <-  .print("I cannot reverse, I must keep waiting...");
         -wait_for(_);
-        .send(Driver,tell,flashing);
+        -driver_ahead_reversing;
+        ?vision_dist(Vis);
         ?facing(Dir);
-        check_behind(1, Dir);
-        !reverse;
-        !resolve.*/
+        check_ahead(Vis, Dir);
+        !resolve.
 
 
 //When waiting and the road is still occupied, take a counter off wait_for and keep checking ahead.
@@ -284,7 +294,7 @@ starting_up.
 //When waiting and there is no agent blocking the road, stop waiting and resume driving.
 +!resolve : wait_for(X)
     <-  .print("Other driver began moving. I will follow");
-        -flashed;
+        -flashed(_);
         -wait_for(X).
 
 //If the driver ahead of me is intending to reverse and I remember a passing place, I will reverse.
@@ -308,8 +318,8 @@ starting_up.
 
 
 
-+!resolve : resolving_with(Driver) & following(Driver) & pass_found(Dist)
-    <-  .print("Driver ahead of me stopped. I will wait to see if they move again");
++!resolve : road(_,_,occupied(Driver),_) & resolving_with(Driver) & following(Driver) & pass_found(Dist)
+    <-  .print("Driver ahead of me stopped, I know of a passing place behind. I will wait to see if they move again");
         +wait_for(Dist);
         ?vision_dist(Vis);
         ?facing(Dir);
@@ -317,7 +327,7 @@ starting_up.
         !resolve.
 
 //If resolving with another driver that the agent is already following, wait for 5 seconds to see if they move out of the way.
-+!resolve : resolving_with(Driver) & following(Driver)
++!resolve : road(_,_,occupied(Driver),_) & resolving_with(Driver) & following(Driver)
     <-  .print("Driver ahead of me stopped. I will wait to see if they move again");
         +wait_for(5);
         ?vision_dist(Vis);
@@ -534,7 +544,8 @@ starting_up.
 
 //While reversing past passing place, if the desired distance is reached, go into waiting_for_pass state.
 +!reverse : reversing_past_pass(0)
-    <-  -reversing_past_pass(_);
+    <-  -pass_found(_);
+        -reversing_past_pass(_);
         .wait(1000);
         !waiting_for_pass.
 
@@ -557,6 +568,10 @@ starting_up.
         ?facing(Dir);
         move_backward(Dir);
         check_behind(1, Dir);
+        !reverse.
++!reverse : pass_found(0)
+    <-  .print("initiated reversing while next to a passing place. Reversing past it and resolving.");
+        +reversing_past_pass(1);
         !reverse.
 
 //While reversing and the road is clear, move back one space

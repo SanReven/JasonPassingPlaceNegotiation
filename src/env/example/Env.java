@@ -925,7 +925,7 @@ public class Env extends Environment {
             if (otherAgID >= 0) {
                 String roadBlockedText = "road_blocked(" + newPos.x + "," + newPos.y + ",occupied(" + agentNameIdInverse.get(otherAgID) + "))";
                 addPercept(agName, Literal.parseLiteral(roadBlockedText));
-                logger.info("AGENT CRASHED");
+                logger.info("AGENT CRASHED: " + agName);
             } else {
                 model.setAgPos(agID,newPos);
             }
