@@ -299,6 +299,12 @@ starting_up.
         !reverse;
         !resolve.
 
++!resolve : wait_for(0) & road(_,_,occupied(Driver),_) & leader_not_reversing
+    <-  .print("Driver ahead seems to be stuck. ENTERING HON");
+        -wait_for(_);
+        .send(Driver,tell,enter_hon);
+        !hon;
+        !resolve.
 
 
 +!resolve : wait_for(0) & road(_,_,occupied(Driver),_)
@@ -307,6 +313,8 @@ starting_up.
         -driver_ahead_reversing;
         ?vision_dist(Vis);
         ?facing(Dir);
+        +leader_not_reversing;
+        +wait_for(5);
         check_ahead(Vis, Dir);
         !resolve.
 
