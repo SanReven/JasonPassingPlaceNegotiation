@@ -72,22 +72,22 @@ V2 Questionnaire agents - primitive communication
 405-408: 3 driverq_comm agents.
 409-410: 4 driverq_comm agents.
 
-V2 Questionnaire agents - higher order logic
-501-504: 2 driverq_hol agents.
-505-508: 3 driverq_hol agents.
-509-510: 4 driverq_hol agents.
+V2 Questionnaire agents - higher order negotiation
+501-504: 2 driverq_hon agents.
+505-508: 3 driverq_hon agents.
+509-510: 4 driverq_hon agents.
 */
 
 MAS main {
 
     //(world option number, number of agents)
-    environment: example.Env(410,4)
+    environment: example.Env(504,2)
 
     agents: //driver #3;
             //player #1;
             //driverq_nocomm #4;
-            driverq_comm #4;
-            //driverq_hol #4;
+            //driverq_comm #2;
+            driverq_hon #2;
             //driverquestion #4;
 
     aslSourcePath: "src/agt";

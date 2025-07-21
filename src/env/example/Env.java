@@ -821,8 +821,8 @@ public class Env extends Environment {
                     add(PASS, 2, 2);
                     break;
                 case 504:
-                    addDriver(0, 0, 1, "driverq_hol1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_hol2", Direct.left);
+                    addDriver(0, 0, 1, "driverq_hon1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     add(PASS, 10, 0);
                     add(PASS, 2, 0);
                     break;

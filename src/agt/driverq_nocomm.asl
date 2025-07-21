@@ -1,5 +1,6 @@
-// Agent driverquestion
-//This agent negotiates passing places according to the Questionnaire results and questionnaire decision tree.
+// Agent driverq_nocomm
+//This agent negotiates passing places according to the decision tree gained from the most common approaches in the Driver Behaviour Questionnaire.
+//This agent will not attempt to communicate with other agents in any way.
 
 /* Initial beliefs and rules */
 vision_dist(3).
