@@ -71,6 +71,12 @@ starting_up.
     <-  -flashed(_);
         .print("I got flashed while not in resolve. Removing flash").
 
++flashing[source(A)] : flashed_driver(Driver) & A=Driver
+    <-  .print("FLASHED WHILE FLASHING! ENTERING HON");
+        .send(Driver,tell,enter_hon);
+        +enter_hon.
+
+
 +flashing[source(A)]
     <- -flashing;
         .print("I GOT FLASHED!");
@@ -163,6 +169,10 @@ starting_up.
 
 //RESOLVE ACTIONS
 
++!resolve : enter_hon
+    <-  .print("Suspending resolve. ENTERING HON");
+        !hon;
+        !resolve.
 
 //If waiting for a driver to arrive and an oncoming driver approaches.
 //Do not wait for the other driver anymore, and wait for the oncoming driver to pass.
@@ -283,6 +293,7 @@ starting_up.
     <-  .print("No longer waiting. Starting to reverse");
         -wait_for(_);
         .send(Driver,tell,flashing);
+        +flashed_driver(Driver);
         ?facing(Dir);
         check_behind(1, Dir);
         !reverse;
@@ -340,7 +351,7 @@ starting_up.
 +!resolve : resolving_with(Driver) & failed_to_resolve_with(Driver)
     <-  .print("Driver previously failed to resolve with found");
         .print("ENTERING HIGHER ORDER NEGOTIATION");
-        .send(Driver,tell,enter_hol);
+        .send(Driver,tell,enter_hon);
         !hol.
 
 
@@ -516,6 +527,9 @@ starting_up.
 
 
 //REVERSING ACTIONS
++!reverse : enter_hon
+    <-  .print("Abandoning reverse. ENTERING HON");
+        !hon.
 
 +!reverse : flashed
     <-  -flashed;
@@ -637,9 +651,30 @@ starting_up.
 /* WAITING FOR OTHER DRIVERS TO MOVE ACTiONS */
 //This set of actions will keep going back and forth between checking the road ahead and checking behind until either the road ahead or road behind is clear.
 
+//If the counter has passed to enter HON, send a message to the driver behind to enter HON. Then enter HON myself.
++!wait_for_others : waiting_counter_for_others(10) & road(_,_,occupied(Driver),_) & checked(behind)
+    <-  .send(Driver,tell,enter_hon);
+        -checked(behind);
+        !enter_hon.
+
+//If the counter has passed to enter HON, send a message to the driver ahead to enter HON.
++!wait_for_others : waiting_counter_for_others(10) & road(_,_,occupied(Driver),_)
+    <-  .print("We are stuck! ENTERING HON");
+        .send(Driver,tell,enter_hon);
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_behind(Vis, Dir);
+        -checked(ahead);
+        +checked(behind);
+        !wait_for_others.
+
+
 //While the road behind is occupied, keep checking ahead
 +!wait_for_others : checked(behind) & road(_,_,occupied(Driver),_)
     <-  .wait(500);
+        ?waiting_counter_for_others(X);
+        -waiting_counter_for_others(X);
+        +waiting_counter_for_others(X+1);
         ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
@@ -660,19 +695,22 @@ starting_up.
 //When there is no agent ahead, stop resolving the scenario with the oncoming driver, and return to driving forward.
 +!wait_for_others : checked(ahead)
     <-  -checked(ahead);
+        -waiting_counter_for_others(_);
         -resolving_with(_).
 
 //When there is no agent behind, begin reversing, and then resolve the scenario again.
 //Usually agents only access reversing from within resolve, but due to the possibility of not having to resolve when the road ahead is clear when in !wait_for_others, it is easier to add resolve after reversing is done here.
 +!wait_for_others : checked(behind)
     <-  -checked(behind);
-        .print("I am completely stuck. Waiting for anyone to move...");
+        -waiting_counter_for_others(_);
         !reverse;
         !resolve.
 
 //When waiting for others to move, check ahead first.
 +!wait_for_others
-    <-  .wait(500);
+    <-  .print("I am completely stuck. Waiting for anyone to move...");
+        +waiting_counter_for_others(0);
+        .wait(500);
         ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
