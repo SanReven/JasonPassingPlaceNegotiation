@@ -360,7 +360,7 @@ starting_up.
     <-  .print("Driver previously failed to resolve with found");
         .print("ENTERING HIGHER ORDER NEGOTIATION");
         .send(Driver,tell,enter_hon);
-        !hol.
+        !hon.
 
 
 +!resolve : road(_,_,occupied(Driver),_) & resolving_with(Driver) & following(Driver) & pass_found(Dist)
@@ -724,5 +724,110 @@ starting_up.
         check_ahead(Vis, Dir);
         +checked(ahead);
         !wait_for_others.
+
+
+
+
+//HIGHER ORDER NEGOTIATION
+
++!hon : enter_hon
+    <-  -enter_hon;
+        !hon.
+
++!hon : hon_standby_checkdrivers_waitforbehind
+    <-  .print("I AM IN HON! I AM AHEAD!");
+        !hon.
+
++!hon : hon_standby_checkdrivers_waitforleader
+    <-  .print("I AM IN HON! I AM BEHIND!");
+        !hon.
+
+
++!hon : looked_behind
+    <-  -looked_behind;
+        +hon_pass_behind(0);
+        ?hon_following_ahead(X);
+        ?hon_driver_ahead(Ahead);
+        if (road(_,_,_,has_pass(Side))) {
+            -hon_pass_behind(0);
+            +hon_pass_behind(1);
+        }
+
+        if (road(_,_,occupied(Driver),_)) {
+            .send(Driver,tell,hon_following_chain(X+1));
+            .send(Driver,tell,enter_hon);
+            +hon_drivers_behind(1);
+            +hon_driver_behind_me(Driver);
+            .send(Ahead,tell,hon_driver_behind_other(Driver));
+            +hon_standby_checkdrivers_waitforbehind;
+        } else {
+            +hon_drivers_behind(0);
+            ?hon_pass_behind(Y);
+            .send(Ahead,tell,hon_passes_ahead(Y));
+            .send(Ahead,tell,hon_ready_to_negotiate);
+        }
+    //WILL NEED TO RETURN HERE:
+    //Need to add an enter_hon case for other states as well.
+    //GO TO THE TOP AND HANDLE THE FOLLOWING MESSAGES:
+    //-hon_Ready_to_negotiate
+    //-Hon_driver_behind_other
+    //-Hon_following_chain
+    //-Hon_passes_ahead
+
+
+        if(X > 0) {
+            +hon_standby_checkdrivers_waitforleader;
+        } else {
+            +hon_standby_checkdrivers;
+        }
+        !hon.
+
+        
+
+
+
+
+
++!hon : looked_ahead & hon_following_ahead(_)
+    <-  -looked_ahead;
+        ?road(_,_,occupied(Driver),_);
+        -resolving_with(_);
+        -following(_);
+        +hon_driver_ahead(Driver);
+
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_behind(Vis, Dir);
+        +looked_behind;
+        !hon.
+
++!hon : looked_ahead
+    <-  -looked_ahead;
+        +hon_following_ahead(0);
+        if (road(_,_,occupied(Driver),_)) {
+            -resolving_with(_);
+            -following(_);
+            +hon_driver_ahead(Driver);
+            .send(Driver,tell,enter_hon);
+        }
+        if (road(_,_,_,has_pass(Side))) {
+            +hon_pass_between_side(Side);
+        }
+        if (pass(_,_,occupied(Inpass),_)) {
+            +hon_driver_in_pass(Inpass);
+        }
+
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_behind(Vis, Dir);
+        +looked_behind;
+        !hon.
+
++!hon
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        +looked_ahead;
+        !hon.
 
 +!stop <- !stop.
