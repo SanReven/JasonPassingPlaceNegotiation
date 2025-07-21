@@ -174,7 +174,8 @@ starting_up.
 
 
 +!resolve : not_arrived_yet(Driver) & waiting_counter_in_pass(10)
-    <-  ?resolving_with(Driver);
+    <-  .print("Other driver never arrived. I will remember this...beginning to move again");
+        ?resolving_with(Driver);
         +failed_to_resolve_with(Driver);
         -resolving_with(Driver);
         -not_arrived_yet(Driver);
@@ -331,11 +332,16 @@ starting_up.
 
 //If the driver ahead of me is intending to reverse but I do not remember any passing places, I will refuse to reverse, and get rid of the driver_ahead_reversing belief.
 +!resolve : driver_ahead_reversing
-    <-  -driver_ahead_reversing;
+    <-  -failed_to_resolve_with(_);
+        -driver_ahead_reversing;
         .print("Driver ahead of me wants to reverse towards me, but I don't know any passing places. I am not reversing.");
         !resolve.
 
-
++!resolve : resolving_with(Driver) & failed_to_resolve_with(Driver)
+    <-  .print("Driver previously failed to resolve with found");
+        .print("ENTERING HIGHER ORDER NEGOTIATION");
+        .send(Driver,tell,enter_hol);
+        !hol.
 
 
 +!resolve : road(_,_,occupied(Driver),_) & resolving_with(Driver) & following(Driver) & pass_found(Dist)
@@ -511,7 +517,9 @@ starting_up.
 
 //REVERSING ACTIONS
 
-
++!reverse : flashed
+    <-  -flashed;
+        !reverse.
 
 //While reversing, if there is a driver behind, wait for them to get out of the way.
 //POSSIBLY RETURN HERE: WAIT FOR ANOTHER SECOND OR SO AND ENTER WAIT FOR OTHERS MODE.
