@@ -51,6 +51,132 @@ starting_up.
         +pass_found(0).
 
 
+
+
+//HIGHER ORDER NEGOTIATION
+
+//This causes more harm than good, possibly remove this altogether.
+/*+!hon : enter_hon
+    <-  .print("I am already in HON and been told to enter HON");
+        -enter_hon;
+
+        //Testing to get rid of the percepts.
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !hon.*/
+
++!hon : hon_standby_checkdrivers_waitforbehind
+    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
+        .print("I AM IN HON! I AM AHEAD!");
+        .wait(1000);
+        !hon.
+
++!hon : hon_standby_checkdrivers_waitforleader
+    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
+        .print("I AM IN HON! I AM BEHIND!");
+        .wait(1000);
+        !hon.
+
+
++!hon : hon_look_behind
+    <-  .print("I have looked behind. Getting ready to negotiate...");
+        -hon_look_behind;
+
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_behind(Vis, Dir);
+
+        +hon_pass_behind(0);
+        ?hon_following_ahead(X);
+        ?hon_driver_ahead(Ahead);
+        if (road(_,_,_,has_pass(Side))) {
+            -hon_pass_behind(0);
+            +hon_pass_behind(1);
+        }
+
+        if (road(_,_,occupied(Driver),_)) {
+            .send(Driver,tell,hon_following_chain(X+1));
+            .send(Driver,tell,enter_hon);
+            +hon_drivers_behind(1);
+            +hon_driver_behind_me(Driver);
+            .send(Ahead,tell,hon_driver_behind_other(Driver));
+            +hon_standby_checkdrivers_waitforbehind;
+        } else {
+            +hon_drivers_behind(0);
+            ?hon_pass_behind(Y);
+            .send(Ahead,tell,hon_passes_ahead(Y));
+            .send(Ahead,tell,hon_ready_to_negotiate);
+        }
+    //WILL NEED TO RETURN HERE:
+    //Need to add an enter_hon case for other states as well.
+    //GO TO THE TOP AND HANDLE THE FOLLOWING MESSAGES:
+    //-hon_Ready_to_negotiate
+    //-Hon_driver_behind_other
+    //-Hon_following_chain
+    //-Hon_passes_ahead
+
+
+        if (X > 0) {
+            +hon_standby_checkdrivers_waitforleader;
+        } else {
+            +hon_standby_checkdrivers_waitforbehind;
+        }
+        !hon.
+
+        
+
+
+
+
+
++!hon : hon_look_ahead & hon_following_ahead(_)
+    <-  .print("I have looked ahead and I am following someone who is already in HON. Looking behind now");
+        -hon_look_ahead;
+
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+
+        ?road(_,_,occupied(Driver),_);
+        -resolving_with(_);
+        -following(_);
+        +hon_driver_ahead(Driver);
+
+        +hon_look_behind;
+        !hon.
+
++!hon : hon_look_ahead
+    <-  .print("I have looked ahead. looking behind now...");
+        -hon_look_ahead;
+        +hon_following_ahead(0);
+
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+
+        if (road(_,_,occupied(Driver),_)) {
+            -resolving_with(_);
+            -following(_);
+            +hon_driver_ahead(Driver);
+            .send(Driver,tell,enter_hon);
+        }
+        if (road(_,_,_,has_pass(Side))) {
+            +hon_pass_between_side(Side);
+        }
+        if (pass(_,_,occupied(Inpass),_)) {
+            +hon_driver_in_pass(Inpass);
+        }
+
+        +hon_look_behind;
+        !hon.
+
++!hon
+    <-  .print("I have entered HON. Checking ahead now...");
+        +hon_look_ahead;
+        !hon.
+
+
 /*Basic plans for driving, remembering passing places, negotiating passing places*/
 
 //Receiving percept of trying to move to a blocked space, the agent would crash. Send message for crashing and stop the agent fully.
@@ -73,6 +199,8 @@ starting_up.
 
 +flashing[source(A)] : flashed_driver(Driver) & A=Driver
     <-  .print("FLASHED WHILE FLASHING! ENTERING HON");
+        -flashing;
+        flashed_driver(Driver);
         .send(Driver,tell,enter_hon);
         +enter_hon.
 
@@ -171,6 +299,7 @@ starting_up.
 
 +!resolve : enter_hon
     <-  .print("Suspending resolve. ENTERING HON");
+        -enter_hon;
         !hon;
         !resolve.
 
@@ -660,13 +789,13 @@ starting_up.
 //This set of actions will keep going back and forth between checking the road ahead and checking behind until either the road ahead or road behind is clear.
 
 //If the counter has passed to enter HON, send a message to the driver behind to enter HON. Then enter HON myself.
-+!wait_for_others : waiting_counter_for_others(10) & road(_,_,occupied(Driver),_) & checked(behind)
++!wait_for_others : waiting_counter_for_others(0) & road(_,_,occupied(Driver),_) & checked(behind)
     <-  .send(Driver,tell,enter_hon);
         -checked(behind);
-        !enter_hon.
+        !hon.
 
 //If the counter has passed to enter HON, send a message to the driver ahead to enter HON.
-+!wait_for_others : waiting_counter_for_others(10) & road(_,_,occupied(Driver),_)
++!wait_for_others : waiting_counter_for_others(0) & road(_,_,occupied(Driver),_)
     <-  .print("We are stuck! ENTERING HON");
         .send(Driver,tell,enter_hon);
         ?facing(Dir);
@@ -682,7 +811,7 @@ starting_up.
     <-  .wait(500);
         ?waiting_counter_for_others(X);
         -waiting_counter_for_others(X);
-        +waiting_counter_for_others(X+1);
+        +waiting_counter_for_others(X-1);
         ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
@@ -717,7 +846,7 @@ starting_up.
 //When waiting for others to move, check ahead first.
 +!wait_for_others
     <-  .print("I am completely stuck. Waiting for anyone to move...");
-        +waiting_counter_for_others(0);
+        +waiting_counter_for_others(10);
         .wait(500);
         ?facing(Dir);
         ?vision_dist(Vis);
@@ -728,106 +857,6 @@ starting_up.
 
 
 
-//HIGHER ORDER NEGOTIATION
 
-+!hon : enter_hon
-    <-  -enter_hon;
-        !hon.
-
-+!hon : hon_standby_checkdrivers_waitforbehind
-    <-  .print("I AM IN HON! I AM AHEAD!");
-        !hon.
-
-+!hon : hon_standby_checkdrivers_waitforleader
-    <-  .print("I AM IN HON! I AM BEHIND!");
-        !hon.
-
-
-+!hon : looked_behind
-    <-  -looked_behind;
-        +hon_pass_behind(0);
-        ?hon_following_ahead(X);
-        ?hon_driver_ahead(Ahead);
-        if (road(_,_,_,has_pass(Side))) {
-            -hon_pass_behind(0);
-            +hon_pass_behind(1);
-        }
-
-        if (road(_,_,occupied(Driver),_)) {
-            .send(Driver,tell,hon_following_chain(X+1));
-            .send(Driver,tell,enter_hon);
-            +hon_drivers_behind(1);
-            +hon_driver_behind_me(Driver);
-            .send(Ahead,tell,hon_driver_behind_other(Driver));
-            +hon_standby_checkdrivers_waitforbehind;
-        } else {
-            +hon_drivers_behind(0);
-            ?hon_pass_behind(Y);
-            .send(Ahead,tell,hon_passes_ahead(Y));
-            .send(Ahead,tell,hon_ready_to_negotiate);
-        }
-    //WILL NEED TO RETURN HERE:
-    //Need to add an enter_hon case for other states as well.
-    //GO TO THE TOP AND HANDLE THE FOLLOWING MESSAGES:
-    //-hon_Ready_to_negotiate
-    //-Hon_driver_behind_other
-    //-Hon_following_chain
-    //-Hon_passes_ahead
-
-
-        if(X > 0) {
-            +hon_standby_checkdrivers_waitforleader;
-        } else {
-            +hon_standby_checkdrivers;
-        }
-        !hon.
-
-        
-
-
-
-
-
-+!hon : looked_ahead & hon_following_ahead(_)
-    <-  -looked_ahead;
-        ?road(_,_,occupied(Driver),_);
-        -resolving_with(_);
-        -following(_);
-        +hon_driver_ahead(Driver);
-
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_behind(Vis, Dir);
-        +looked_behind;
-        !hon.
-
-+!hon : looked_ahead
-    <-  -looked_ahead;
-        +hon_following_ahead(0);
-        if (road(_,_,occupied(Driver),_)) {
-            -resolving_with(_);
-            -following(_);
-            +hon_driver_ahead(Driver);
-            .send(Driver,tell,enter_hon);
-        }
-        if (road(_,_,_,has_pass(Side))) {
-            +hon_pass_between_side(Side);
-        }
-        if (pass(_,_,occupied(Inpass),_)) {
-            +hon_driver_in_pass(Inpass);
-        }
-
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_behind(Vis, Dir);
-        +looked_behind;
-        !hon.
-
-+!hon
-    <-  ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        +looked_ahead;
-        !hon.
 
 +!stop <- !stop.
