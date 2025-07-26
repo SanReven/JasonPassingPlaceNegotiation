@@ -66,15 +66,65 @@ starting_up.
         check_ahead(Vis, Dir);
         !hon.*/
 
-+!hon : hon_standby_checkdrivers_waitforbehind
-    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
-        .print("I AM IN HON! I AM AHEAD!");
-        .wait(1000);
-        !hon.
++hon_ready_to_negotiate[source(Driver)]
+    ?hon_driver_ahead(Ahead);
+    
+    if(hon_standby_checkdrivers_waitforbehind) {
+        if(Driver=Ahead) {
+            +hon_ready_myside;
+        } else {
+            +hon_ready_theirside;
+        }
+    } else {
+        .send(Ahead,tell,hon_ready_to_negotiate);
+    }
+    -hon_ready_to_negotiate. 
 
+
++hon_following_chain(X)
+    -hon_following_chain(X);
+    -hon_following_ahead(_);
+    +hon_following_ahead(X).
+
++hon_driver_behind_other(Driver)[source(Sender)]
+    //Do not need to use the actual driver data yet but may be good later on.
+    ?hon_driver_ahead(Ahead);
+
+    if (Sender=Ahead) {
+        ?hon_drivers_ahead(X);
+        -hon_drivers_ahead(X);
+        +hon_drivers_ahead(X+1);
+    } else {
+        ?hon_drivers_behind(X);
+        -hon_drivers_behind(X);
+        +hon_drivers_behind(X+1);
+        .send(Ahead,tell,hon_driver_behind_other(Driver));
+    }
+    -hon_driver_behind_other(Driver).
+    
+//Case for failed to resolve previously.
++!hon : hon_negotiating & failed_to_resolve_with(Driver) & hon_driver_ahead(Ahead) & Driver=Ahead
+    .print("HON Resolving with driver I have stalemated before. Attempting to share information....").
+    //RETURN HERE. Send last pass distance, side and driver name over to other person.
+    //POSSIBLY GO BACK TO THE PLACE WHERE ADDING FAILED TO RESOLVE AND ADD PASS SIDE THERE.
+
+
+
+
+//Initial setup of counting everyone up.
 +!hon : hon_standby_checkdrivers_waitforleader
     <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
         .print("I AM IN HON! I AM BEHIND!");
+        .wait(1000);
+        !hon.
+
++!hon : hon_standby_checkdrivers_waitforbehind & hon_ready_myside & hon_ready_theirside
+    <-  .print("EVERYONE IS READY. BEGINNING TO NEGOTIATE").
+        //When this is tested, add -hon_standby_checkdrivers_waitforbehind, -hon_ready_myside, -hon_ready_theirside, +hon_negotiating
+
++!hon : hon_standby_checkdrivers_waitforbehind
+    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
+        .print("I AM IN HON! I AM AHEAD!");
         .wait(1000);
         !hon.
 
@@ -107,25 +157,27 @@ starting_up.
             ?hon_pass_behind(Y);
             .send(Ahead,tell,hon_passes_ahead(Y));
             .send(Ahead,tell,hon_ready_to_negotiate);
-        }
-    //WILL NEED TO RETURN HERE:
-    //Need to add an enter_hon case for other states as well.
-    //GO TO THE TOP AND HANDLE THE FOLLOWING MESSAGES:
-    //-hon_Ready_to_negotiate
-    //-Hon_driver_behind_other
-    //-Hon_following_chain
-    //-Hon_passes_ahead
 
+            if(X=0) {
+                +hon_ready_myside;
+            }
+        }
 
         if (X > 0) {
             +hon_standby_checkdrivers_waitforleader;
         } else {
+            -hon_drivers_ahead(_)
             +hon_standby_checkdrivers_waitforbehind;
         }
         !hon.
 
         
-
+//WILL NEED TO RETURN HERE:
+    //GO TO THE TOP AND HANDLE THE FOLLOWING MESSAGES:
+    //-hon_Ready_to_negotiate
+    //-Hon_driver_behind_other
+    //-Hon_following_chain
+    //-Hon_passes_ahead
 
 
 
@@ -173,6 +225,7 @@ starting_up.
 
 +!hon
     <-  .print("I have entered HON. Checking ahead now...");
+        +hon_drivers_ahead(0);
         +hon_look_ahead;
         !hon.
 
