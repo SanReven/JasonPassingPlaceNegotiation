@@ -66,8 +66,26 @@ starting_up.
         check_ahead(Vis, Dir);
         !hon.*/
 
-+hon_ready_to_negotiate[source(Driver)]
-    <-  ?facing(Dir);
+        
+//Had to separate these methods as such as the standby part was important, otherwise the front agents would be stuck in a loop sending the message to each other. 
++!hon : hon_ready_to_negotiate[source(Driver)] & hon_standby_checkdrivers_waitforleader
+    <-  .print("WHILE I AM BEHIND, Got message about driver being ready to negotiate. Processing...");
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+
+        ?road(_,_,occupied(Ahead),_);
+        -hon_driver_ahead(_);
+        +hon_driver_ahead(Ahead);
+
+        .send(Ahead,tell,hon_ready_to_negotiate);
+
+        -hon_ready_to_negotiate[source(Driver)];
+        !hon. 
+
++!hon : hon_ready_to_negotiate[source(Driver)] & hon_standby_checkdrivers_waitforbehind & not hon_ready_theirside
+    <-  .print("WHILE I AM LEADING, Got message about driver being ready to negotiate. Processing...");
+        ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
 
@@ -75,25 +93,27 @@ starting_up.
         -hon_driver_ahead(_);
         +hon_driver_ahead(Ahead);
         
-        if(hon_standby_checkdrivers_waitforbehind) {
-            if(Driver=Ahead) {
-                +hon_ready_myside;
-            } else {
-                +hon_ready_theirside;
-            }
+        if(Driver=Ahead) {
+            +hon_ready_theirside;
         } else {
-            .send(Ahead,tell,hon_ready_to_negotiate);
+            +hon_ready_myside;
         }
-        -hon_ready_to_negotiate. 
+        .send(Ahead,tell,hon_ready_to_negotiate);
+
+        -hon_ready_to_negotiate[source(Driver)];
+        !hon. 
 
 
-+hon_following_chain(X)
-   <-   -hon_following_chain(X);
++!hon : hon_following_chain(X)[source(Sender)] & not my_name(Sender)
+   <-   .print("Got message about drivers I am following. Processing...");
+        -hon_following_chain(X);
         -hon_following_ahead(_);
-        +hon_following_ahead(X).
+        +hon_following_ahead(X);
+        !hon.
 
-+hon_driver_behind_other(Driver)[source(Sender)]
-    <-  ?facing(Dir);
++!hon : hon_driver_behind_other(Driver)[source(Sender)]
+    <- .print("Got message about driver behind other. Processing...");
+        ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
 
@@ -116,7 +136,8 @@ starting_up.
             +hon_drivers_behind(X+1);
             .send(Ahead,tell,hon_driver_behind_other(Driver));
         }
-        -hon_driver_behind_other(Driver).
+        -hon_driver_behind_other(Driver);
+        !hon.
     
 //Case for failed to resolve previously.
 +!hon : hon_negotiating & failed_to_resolve_with(Driver) & hon_driver_ahead(Ahead) & Driver=Ahead
@@ -124,6 +145,8 @@ starting_up.
         //RETURN HERE. Send last pass distance, side and driver name over to other person.
         //POSSIBLY GO BACK TO THE PLACE WHERE ADDING FAILED TO RESOLVE AND ADD PASS SIDE THERE.
 
+
+//Case for 
 
 
 
@@ -234,9 +257,13 @@ starting_up.
 
         if (road(_,_,occupied(Driver),_)) {
             -resolving_with(_);
-            -following(_);
             +hon_driver_ahead(Driver);
             .send(Driver,tell,enter_hon);
+            if(following(Leader) & Driver=Leader) {
+                +hon_driver_ahead(Driver);
+                -hon_following_ahead(0);
+                +hon_following_ahead(1);
+            }
         }
         if (road(_,_,_,has_pass(Side))) {
             +hon_pass_between_side(Side);
