@@ -66,6 +66,7 @@ starting_up.
         check_ahead(Vis, Dir);
         !hon.*/
 
+//HANDLING OF MESSAGES FROM OTHERS.
         
 //Had to separate these methods as such as the standby part was important, otherwise the front agents would be stuck in a loop sending the message to each other. 
 +!hon : hon_ready_to_negotiate[source(Driver)] & hon_standby_checkdrivers_waitforleader
@@ -146,9 +147,37 @@ starting_up.
         //POSSIBLY GO BACK TO THE PLACE WHERE ADDING FAILED TO RESOLVE AND ADD PASS SIDE THERE.
 
 
-//Case for 
+//Case for getting stuck in long queue.
 
 
+//Getting Stuck: Negotiating phase.
+//STILL NEED TO HANDLE FURTHER CASES SUCH AS FAR PASSING PLACES AND MULTIPLE PASSING PLACES
++!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X=Y
+    <-  .print("Queue sizes are equal! Checking other variables...");
+        //Flesh this out more if needed. Future works.
+        .wait(5000);
+        !hon.
+
++!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X<Y
+    <-  .print("My side is shorter! Preparing to give space to other queue.");
+        //RETURN HERE AND FLESH THIS OUT.
+        .wait(5000);
+        !hon.
+
++!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X>Y
+    <-  .print("My side is longer! Preparing to do back and forth with drivers behind.");
+        //RETURN HERE AND FLESH THIS OUT.
+        .wait(5000);
+        !hon.
+
++!hon : hon_negotiating
+    <-  .print("Sending other leader my side information.");
+        .wait(1000);
+        ?hon_driver_ahead(Other);
+        ?hon_drivers_behind(X);
+        //Passing place side goes here.
+        .send(Other,tell,hon_other_queue_length(X));
+        !hon.
 
 //Initial setup of counting everyone up.
 +!hon : hon_standby_checkdrivers_waitforleader
@@ -159,8 +188,12 @@ starting_up.
 
 +!hon : hon_standby_checkdrivers_waitforbehind & hon_ready_myside & hon_ready_theirside
     <-  .print("EVERYONE IS READY. BEGINNING TO NEGOTIATE");
-        .wait(500).
-        //When this is tested, add -hon_standby_checkdrivers_waitforbehind, -hon_ready_myside, -hon_ready_theirside, +hon_negotiating
+        .wait(500);
+        -hon_standby_checkdrivers_waitforbehind;
+        -hon_ready_myside;
+        -hon_ready_theirside;
+        +hon_negotiating;
+        !hon.
 
 +!hon : hon_standby_checkdrivers_waitforbehind & hon_ready_myside
     <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
