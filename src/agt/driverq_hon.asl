@@ -67,46 +67,62 @@ starting_up.
         !hon.*/
 
 +hon_ready_to_negotiate[source(Driver)]
-    ?hon_driver_ahead(Ahead);
-    
-    if(hon_standby_checkdrivers_waitforbehind) {
-        if(Driver=Ahead) {
-            +hon_ready_myside;
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+
+        ?road(_,_,occupied(Ahead),_);
+        -hon_driver_ahead(_);
+        +hon_driver_ahead(Ahead);
+        
+        if(hon_standby_checkdrivers_waitforbehind) {
+            if(Driver=Ahead) {
+                +hon_ready_myside;
+            } else {
+                +hon_ready_theirside;
+            }
         } else {
-            +hon_ready_theirside;
+            .send(Ahead,tell,hon_ready_to_negotiate);
         }
-    } else {
-        .send(Ahead,tell,hon_ready_to_negotiate);
-    }
-    -hon_ready_to_negotiate. 
+        -hon_ready_to_negotiate. 
 
 
 +hon_following_chain(X)
-    -hon_following_chain(X);
-    -hon_following_ahead(_);
-    +hon_following_ahead(X).
+   <-   -hon_following_chain(X);
+        -hon_following_ahead(_);
+        +hon_following_ahead(X).
 
 +hon_driver_behind_other(Driver)[source(Sender)]
-    //Do not need to use the actual driver data yet but may be good later on.
-    ?hon_driver_ahead(Ahead);
+    <-  ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
 
-    if (Sender=Ahead) {
-        ?hon_drivers_ahead(X);
-        -hon_drivers_ahead(X);
-        +hon_drivers_ahead(X+1);
-    } else {
-        ?hon_drivers_behind(X);
-        -hon_drivers_behind(X);
-        +hon_drivers_behind(X+1);
-        .send(Ahead,tell,hon_driver_behind_other(Driver));
-    }
-    -hon_driver_behind_other(Driver).
+        ?road(_,_,occupied(Ahead),_);
+        -hon_driver_ahead(_);
+        +hon_driver_ahead(Ahead);
+        //Do not need to use the actual Driver data yet but may be good later on.
+    
+        if (Sender=Ahead) {
+            if(hon_drivers_ahead(X)) {
+                -hon_drivers_ahead(X);
+                +hon_drivers_ahead(X+1);
+            } else {
+                +hon_drivers_ahead(1);
+            }
+            
+        } else {
+            ?hon_drivers_behind(X);
+            -hon_drivers_behind(X);
+            +hon_drivers_behind(X+1);
+            .send(Ahead,tell,hon_driver_behind_other(Driver));
+        }
+        -hon_driver_behind_other(Driver).
     
 //Case for failed to resolve previously.
 +!hon : hon_negotiating & failed_to_resolve_with(Driver) & hon_driver_ahead(Ahead) & Driver=Ahead
-    .print("HON Resolving with driver I have stalemated before. Attempting to share information....").
-    //RETURN HERE. Send last pass distance, side and driver name over to other person.
-    //POSSIBLY GO BACK TO THE PLACE WHERE ADDING FAILED TO RESOLVE AND ADD PASS SIDE THERE.
+    <-  .print("HON Resolving with driver I have stalemated before. Attempting to share information....").
+        //RETURN HERE. Send last pass distance, side and driver name over to other person.
+        //POSSIBLY GO BACK TO THE PLACE WHERE ADDING FAILED TO RESOLVE AND ADD PASS SIDE THERE.
 
 
 
@@ -119,26 +135,38 @@ starting_up.
         !hon.
 
 +!hon : hon_standby_checkdrivers_waitforbehind & hon_ready_myside & hon_ready_theirside
-    <-  .print("EVERYONE IS READY. BEGINNING TO NEGOTIATE").
+    <-  .print("EVERYONE IS READY. BEGINNING TO NEGOTIATE");
+        .wait(500).
         //When this is tested, add -hon_standby_checkdrivers_waitforbehind, -hon_ready_myside, -hon_ready_theirside, +hon_negotiating
+
++!hon : hon_standby_checkdrivers_waitforbehind & hon_ready_myside
+    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
+        .print("I AM IN HON AND READY! WAITING FOR OTHERS TO GET READY!");
+        .wait(500);
+        !hon.
+
++!hon : hon_standby_checkdrivers_waitforbehind & hon_following_ahead(0)
+    <-  +hon_ready_myside;
+        .wait(500);
+        !hon.
 
 +!hon : hon_standby_checkdrivers_waitforbehind
     <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
         .print("I AM IN HON! I AM AHEAD!");
-        .wait(1000);
+        .wait(500);
         !hon.
 
 
 +!hon : hon_look_behind
     <-  .print("I have looked behind. Getting ready to negotiate...");
         -hon_look_behind;
-
+        ?hon_following_ahead(X);
         ?facing(Dir);
         ?vision_dist(Vis);
         check_behind(Vis, Dir);
+        .wait(200);
 
         +hon_pass_behind(0);
-        ?hon_following_ahead(X);
         ?hon_driver_ahead(Ahead);
         if (road(_,_,_,has_pass(Side))) {
             -hon_pass_behind(0);
@@ -157,16 +185,11 @@ starting_up.
             ?hon_pass_behind(Y);
             .send(Ahead,tell,hon_passes_ahead(Y));
             .send(Ahead,tell,hon_ready_to_negotiate);
-
-            if(X=0) {
-                +hon_ready_myside;
-            }
         }
-
+        
         if (X > 0) {
             +hon_standby_checkdrivers_waitforleader;
         } else {
-            -hon_drivers_ahead(_)
             +hon_standby_checkdrivers_waitforbehind;
         }
         !hon.
@@ -182,13 +205,14 @@ starting_up.
 
 
 
-+!hon : hon_look_ahead & hon_following_ahead(_)
++!hon : hon_look_ahead & hon_following_ahead(X) & X>0
     <-  .print("I have looked ahead and I am following someone who is already in HON. Looking behind now");
         -hon_look_ahead;
 
         ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
+        .wait(200);
 
         ?road(_,_,occupied(Driver),_);
         -resolving_with(_);
@@ -206,6 +230,7 @@ starting_up.
         ?facing(Dir);
         ?vision_dist(Vis);
         check_ahead(Vis, Dir);
+        .wait(200);
 
         if (road(_,_,occupied(Driver),_)) {
             -resolving_with(_);
