@@ -67,7 +67,24 @@ starting_up.
         !hon.*/
 
 //HANDLING OF MESSAGES FROM OTHERS.
-        
++!hon : enter_hon_resolve_long(Queue_length)
+    <-  +hon_target_queue_length(Queue_length);
+        if(hon_driver_behind_me(Driver)) {
+            ?hon_driver_behind_me(Driver);
+            .send(Driver,tell,enter_hon_resolve_long(Queue_length));
+        }
+        .wait(500);
+        !hon_resolve_long.
+
++!hon : enter_hon_resolve_short(Drivers_behind)
+    <-  +hon_target_queue_length(Queue_length);
+        if(hon_driver_behind_me(Driver)) {
+            ?hon_driver_behind_me(Driver);
+            .send(Driver,tell,enter_hon_resolve_short(Queue_length));
+        }
+        .wait(500);
+        !hon_resolve_short.
+
 //Had to separate these methods as such as the standby part was important, otherwise the front agents would be stuck in a loop sending the message to each other. 
 +!hon : hon_ready_to_negotiate[source(Driver)] & hon_standby_checkdrivers_waitforleader
     <-  .print("WHILE I AM BEHIND, Got message about driver being ready to negotiate. Processing...");
@@ -140,18 +157,306 @@ starting_up.
         -hon_driver_behind_other(Driver);
         !hon.
     
-//Case for failed to resolve previously.
-+!hon : hon_negotiating & failed_to_resolve_with(Driver) & hon_driver_ahead(Ahead) & Driver=Ahead
-    <-  .print("HON Resolving with driver I have stalemated before. Attempting to share information....").
-        //RETURN HERE. Send last pass distance, side and driver name over to other person.
-        //POSSIBLY GO BACK TO THE PLACE WHERE ADDING FAILED TO RESOLVE AND ADD PASS SIDE THERE.
+//CASE FOR PREVIOUSLY FAILED RESOLUTION.
++!hon : should_reverse(equal)
+    <-  .print("We are equal. Deciding based on name");
+        ?my_name(Me);
+        ?failed_to_resolve_with(Other,_);
+        -should_reverse(equal);
+        if(Me>Other) {
+            should_reverse(me);
+        } elif (Me<Other) {
+            should_reverse(them);
+        } else {
+            .print("This isn't working. Going to reverse...");
+            should_reverse(me);
+        }
+        !hon.
+
++!hon : should_reverse(_) & enter_hon[source(A)]
+    <-  -enter_hon[source(A)];
+        !hon.
+
++!hon : should_reverse(me)
+    <-  .print("I should be the one reversing. Reversing now...");
+        ?failed_to_resolve_with(Driver,_);
+        +resolving_with(Driver);
+        -flashed;
+        -should_reverse(_);
+        -hon_negotiating(_);
+        -failed_to_resolve_with(_,_);
+        -other_dist(_);
+        -other_side(_);
+        -told_other(_);
+        .wait(500);
+        !reverse.
+
++!hon : should_reverse(them) & road(_,_,_,_) & not road(_,_,occupied(_),_)
+    <-  .print("Other person is reversing! I will exit HON");
+        -flashed;
+        -should_reverse(_);
+        -hon_negotiating(_);
+        -failed_to_resolve_with(_,_);
+        -other_dist(_);
+        -other_side(_);
+        -told_other(_);
+        .wait(500).
+
++!hon : should_reverse(them)
+    <-  .wait(500);
+        .print("Waiting on other person to reverse");
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !hon.
+
++!hon : hon_negotiating & failed_to_resolve_with(Driver, Side) & told_other & other_dist(OtherDist) & other_side(OtherSide)
+    <-  .print("Got info from other. Seeing who should reverse.");
+        +should_reverse(equal);
+        ?pass_found(Dist);
+        if(not Dist=OtherDist) {
+            -should_reverse(equal);
+            if(Dist > OtherDist) {
+                -should_reverse(them);
+            } else {
+                -should_reverse(me);
+            }
+        }
+        if(should_reverse(equal) & not Side=OtherSide) {
+            -should_reverse(equal);
+            if(other_side(left)) {
+                +should_reverse(them);
+            } else {
+                +should_reverse(me);
+            }
+        }
+        .wait(500);
+        !hon.
+
++!hon : hon_negotiating & failed_to_resolve_with(Driver, Side) & told_other
+    <-  .wait(500);
+        !hon.
+
++!hon : hon_negotiating & failed_to_resolve_with(Driver, Side) & hon_driver_ahead(Ahead) & Driver=Ahead
+    <-  .print("HON Resolving with driver I have stalemated before. Attempting to share information....");
+        .send(Driver,tell,other_side(Side));
+        ?pass_found(Dist);
+        .send(Driver,tell,other_dist(Dist));
+        .wait(500);
+        +told_other;
+        !hon.
+
+//CASES FOR GETTING STUCK IN LONG QUEUE.
 
 
-//Case for getting stuck in long queue.
+//RESOLUTION FOR LONGER SIDE.:
+//Check to see if everyone has passed.
++!hon_resolve_long : hon_long_current_target(0) & hon_long_check_for_completion & road(_,_,occupied(_),_)
+    <-  -hon_long_check_for_completion;
+        .wait(1000);
+        !hon_resolve_long.
+
++!hon_resolve_long : hon_long_current_target(0) & hon_long_check_for_completion & road(_,_,_,_) & not road(_,_,occupied(_),_)
+    <-  .print("Everyone seems to have passed, exiting HON");
+        ?facing(Dir);
+        move_forward(Dir);
+        -hon_long_backnforth_complete(_);
+        -hon_long_current_target(_);
+        -hon_target_queue_length(_);
+        -hon_long_reversing_target(_).
+
++!hon_resolve_long : hon_long_current_target(0) & hon_long_check_for_completion
+    <-  .wait(500);
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !hon_resolve_long.
+
+//Do X steps forward, where X is the number of cars is the length of the queue
++!hon_resolve_long : hon_long_current_target(0)
+    <-  .wait(1000);
+        -hon_long_current_target(0);
+        !hon_resolve_long.
+
+
++!hon_resolve_long : hon_long_current_target(X) & road(_,_,_,_) & not road(_,_,occupied(_),_)
+    <-  ?facing(Dir);
+        move_forward(Dir);
+        .wait(500);
+        move_forward(Dir);
+        .wait(500);
+        -hon_long_current_target(X);
+        +hon_long_current_target(X - 1);
+        !hon_resolve_long.
+        
++!hon_resolve_long : hon_long_current_target(X)
+    <-  .wait(500);
+        ?facing(Dir);
+        check_ahead(2, Dir);
+        !hon_resolve_long.
+
+//Reversing action to be done after forward action.
++!hon_resolve_long : hon_long_reversing_target(0)
+    <-  .wait(1000);
+        -hon_long_reversing_target(0);
+        !hon_resolve_long.
+
+
++!hon_resolve_long : hon_long_reversing_target(X) & road(_,_,_,_) & not road(_,_,occupied(_),_)
+    <-  ?facing(Dir);
+        move_forward(Dir);
+        .wait(500);
+        move_forward(Dir);
+        .wait(500);
+        -hon_long_reversing_target(X);
+        +hon_long_reversing_target(X - 1);
+        !hon_resolve_long.
+
++!hon_resolve_long : hon_long_reversing_target(X)
+    <-  .wait(500);
+        ?facing(Dir);
+        check_behind(2, Dir);
+        !hon_resolve_long.
+
+//Agent returns here once completing a backnforth action
++!hon_resolve_long : hon_target_queue_length(X) & hon_long_backnforth_complete(Y) & hon_other_queue_length(Z) & Y>(Z-1)
+    <-  -hon_long_backnforth_complete(Y + Z);
+        +hon_long_check_for_completion;
+        +hon_long_current_target(X);
+        +hon_long_reversing_target(X);
+        .wait(500);
+        !hon_resolve_long.
+
++!hon_resolve_long : hon_target_queue_length(X) & hon_long_backnforth_complete(Y)
+    <-  -hon_long_backnforth_complete(Y);
+        +hon_long_backnforth_complete(Y+1);
+        +hon_long_current_target(X + Y + 1);
+        +hon_long_reversing_target(X + Y + 1);
+        .wait(500);
+        !hon_resolve_long.
+
++!hon_resolve_long : hon_target_queue_length(X)
+    <-  +hon_long_backnforth_complete(0);
+        +hon_long_current_target(X);
+        +hon_long_reversing_target(X);
+        .wait(500);
+        !hon_resolve_long.
+
+//Possibly add "If dont have hon_target_queue_length, try to get it from somewhere (drivers ahead maybe) and then convert it to the belief"
++!hon_resolve_long
+    <-  .print("I AM STUCK IN LONG RESOLVE, NOT SURE WHAT TO DO");
+        .wait(500);
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !hon_resolve_long.
+
+//RESOLUTION FOR SHORTER SIDE.:
+//-Step forward until a passing place is found.
+//-Enter the passing place. Exit HON_resolve_short
+
++!hon_resolve_short : pass(X,Y,free,Side)
+    <-  .print("Found passing place! Pulling in.");
+        pullin(X,Y);
+        +in_pass(Side);
+        .wait(500);
+        .print("Exiting HON and driving on as soon as road clears up").
+
++!hon_resolve_short : hon_short_approach_pass & not road(_,_,occupied(_),_)
+    <-  ?facing(Dir);
+        move_forward(Dir);
+        .wait(500);
+        ?facing(Dir);
+        check_ahead(Vis, Dir);
+        !hon_resolve_short.
+
++!hon_resolve_short : hon_short_approach_pass
+    <-  .wait(500);
+        ?facing(Dir);
+        check_ahead(Vis, Dir);
+        !hon_resolve_short.
+
+//-Stop and wait until the driver in front is not equal to driver_ahead.
+
++!hon_resolve_short : hon_short_stabdby & road(_,_,occupied(Driver),_) & hon_driver_ahead(Ahead) & not Driver=Ahead
+    <-  .print("Road has cleared. Getting ready to approach passing place.");
+        -hon_short_stabdby;
+        +hon_short_approach_pass;
+        .wait(500);
+        ?facing(Dir);
+        check_ahead(Vis, Dir);
+        !hon_resolve_short.
+
++!hon_resolve_short : hon_short_stabdby
+    <-  .wait(200);
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !hon_resolve_short.
+
+//-Step back 2 steps for the number of oncoming cars.
+
++!hon_resolve_short : hon_short_stepback(0)
+    <-  .print("Finished stepping back, waiting to be able to pass");
+        -hon_short_stepback(0);
+        +hon_short_stabdby;
+        ?facing(Dir);
+        ?vision_dist(Vis);
+        check_ahead(Vis, Dir);
+        !hon_resolve_short.
+
++!hon_resolve_short : hon_short_stepback(X) & road(_,_,occupied(_),_)
+    <-  .wait(500);
+        ?facing(Dir);
+        check_behind(2, Dir);
+        !hon_resolve_short.
+
++!hon_resolve_short : hon_short_stepback(X)
+    <-  ?facing(Dir);
+        move_backward(Dir);
+        .wait(250);
+        move_backward(Dir);
+        .wait(250);
+        -hon_short_stepback(X);
+        +hon_short_stepback(X - 1);
+        check_behind(2, Dir);
+        !hon_resolve_short.
+
++!hon_resolve_short
+    <-  .wait(500);
+        ?hon_other_queue_length(X);
+        +hon_short_stepback(X);
+        ?facing(Dir);
+        check_behind(2, Dir);
+        !hon_resolve_short.
+
 
 
 //Getting Stuck: Negotiating phase.
 //STILL NEED TO HANDLE FURTHER CASES SUCH AS FAR PASSING PLACES AND MULTIPLE PASSING PLACES
+
++!hon : enter_hon_resolve_short(X)
+    <-  .print("Getting ready to perform short-queue resolution.");
+        if(hon_driver_behind_me(Driver)) {
+            ?hon_driver_behind_me(Driver);
+            .send(Driver,tell,enter_hon_resolve_short(X));
+        }
+        -enter_hon_resolve_short(X);
+        +hon_other_queue_length(X);
+        .wait(500);
+        !hon_resolve_short.
+
++!hon : enter_hon_resolve_long(X)
+    <-  .print("My side is longer! Preparing to do back and forth with drivers behind.");
+        if(hon_driver_behind_me(Driver)) {
+            ?hon_driver_behind_me(Driver);
+            .send(Driver,tell,enter_hon_resolve_long(X));
+        }
+        -enter_hon_resolve_long(X);
+        +hon_other_queue_length(X);
+        .wait(500);
+        !hon_resolve_long.
+
 +!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X=Y
     <-  .print("Queue sizes are equal! Checking other variables...");
         //Flesh this out more if needed. Future works.
@@ -160,15 +465,21 @@ starting_up.
 
 +!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X<Y
     <-  .print("My side is shorter! Preparing to give space to other queue.");
-        //RETURN HERE AND FLESH THIS OUT.
-        .wait(5000);
-        !hon.
+        if(hon_driver_behind_me(Driver)) {
+            ?hon_driver_behind_me(Driver);
+            .send(Driver,tell,enter_hon_resolve_short(Y));
+        }
+        .wait(1000);
+        !hon_resolve_short.
 
 +!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X>Y
     <-  .print("My side is longer! Preparing to do back and forth with drivers behind.");
-        //RETURN HERE AND FLESH THIS OUT.
-        .wait(5000);
-        !hon.
+        if(hon_driver_behind_me(Driver)) {
+            ?hon_driver_behind_me(Driver);
+            .send(Driver,tell,enter_hon_resolve_long(Y));
+        }
+        .wait(1000);
+        !hon_resolve_long.
 
 +!hon : hon_negotiating
     <-  .print("Sending other leader my side information.");
@@ -178,6 +489,7 @@ starting_up.
         //Passing place side goes here.
         .send(Other,tell,hon_other_queue_length(X));
         !hon.
+
 
 //Initial setup of counting everyone up.
 +!hon : hon_standby_checkdrivers_waitforleader
@@ -230,9 +542,9 @@ starting_up.
         }
 
         if (road(_,_,occupied(Driver),_)) {
+            +hon_drivers_behind(1);
             .send(Driver,tell,hon_following_chain(X+1));
             .send(Driver,tell,enter_hon);
-            +hon_drivers_behind(1);
             +hon_driver_behind_me(Driver);
             .send(Ahead,tell,hon_driver_behind_other(Driver));
             +hon_standby_checkdrivers_waitforbehind;
@@ -453,7 +765,8 @@ starting_up.
 +!resolve : not_arrived_yet(Driver) & waiting_counter_in_pass(10)
     <-  .print("Other driver never arrived. I will remember this...beginning to move again");
         ?resolving_with(Driver);
-        +failed_to_resolve_with(Driver);
+        ?in_pass(Side);
+        +failed_to_resolve_with(Driver, Side);
         -resolving_with(Driver);
         -not_arrived_yet(Driver);
         -waiting_counter_in_pass(10);
@@ -623,7 +936,7 @@ starting_up.
         .print("Driver ahead of me wants to reverse towards me, but I don't know any passing places. I am not reversing.");
         !resolve.
 
-+!resolve : resolving_with(Driver) & failed_to_resolve_with(Driver)
++!resolve : resolving_with(Driver) & failed_to_resolve_with(Driver,_)
     <-  .print("Driver previously failed to resolve with found");
         .print("ENTERING HIGHER ORDER NEGOTIATION");
         .send(Driver,tell,enter_hon);
