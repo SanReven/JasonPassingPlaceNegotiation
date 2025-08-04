@@ -258,6 +258,21 @@ starting_up.
 
 //RESOLUTION FOR LONGER SIDE.:
 //Check to see if everyone has passed.
++!hon_resolve_long : hon_long_done[source(A)]
+    <-  .print("Leader is driving ahead! Exiting HON, we can drive on.");
+        -hon_long_done[source(A)];
+        while(enter_hon[source(A)]) {
+            -enter_hon[source(A)];
+        }
+        if(hon_driver_behind_me(Behind)) {
+            .send(Behind,tell,hon_long_done);
+        }
+        -hon_long_backnforth_complete(_);
+        -hon_long_current_target(_);
+        -hon_target_queue_length(_);
+        -hon_long_reversing_target(_);
+        .wait(500).
+
 +!hon_resolve_long : hon_long_current_target(0) & hon_long_check_for_completion & road(_,_,occupied(_),_)
     <-  -hon_long_check_for_completion;
         .wait(1000);
@@ -267,6 +282,13 @@ starting_up.
     <-  .print("Everyone seems to have passed, exiting HON");
         ?facing(Dir);
         move_forward(Dir);
+        //CATCH ANY LEFTOVER ENTER_HON
+        while(enter_hon[source(A)]) {
+            -enter_hon[source(A)];
+        }
+        if(hon_driver_behind_me(Behind)) {
+            .send(Behind,tell,hon_long_done);
+        }
         -hon_long_backnforth_complete(_);
         -hon_long_current_target(_);
         -hon_target_queue_length(_);
@@ -383,6 +405,9 @@ starting_up.
         pullin(X,Y);
         +in_pass(Side);
         .wait(500);
+        while(enter_hon[source(A)]) {
+            -enter_hon[source(A)];
+        }
         .print("Exiting HON and driving on as soon as road clears up").
 
 +!hon_resolve_short : hon_short_approach_pass & not road(_,_,occupied(_),_)
