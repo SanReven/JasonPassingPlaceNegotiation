@@ -294,9 +294,9 @@ public class Env extends Environment {
         }
 
         for (int i = 1; i < viewDist + 1; i++) {
-            checkLocation(agLoc.x + coef, agLoc.y, agName, (coef * (-1)));
-            checkLocation(agLoc.x + coef, agLoc.y + 1, agName, (coef * (-1)));
-            checkLocation(agLoc.x + coef, agLoc.y - 1, agName, (coef * (-1)));
+            checkLocation(agLoc.x + (coef * i), agLoc.y, agName, (coef * (-1)));
+            checkLocation(agLoc.x + (coef * i), agLoc.y + 1, agName, (coef * (-1)));
+            checkLocation(agLoc.x + (coef * i), agLoc.y - 1, agName, (coef * (-1)));
         }
     }
 
