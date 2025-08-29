@@ -188,7 +188,7 @@ starting_up.
     <-  .print("I should be the one reversing. Reversing now...");
         ?failed_to_resolve_with(Driver,_);
         +resolving_with(Driver);
-        -flashed;
+        -flashed(_);
         -should_reverse(_);
         -hon_negotiating(_);
         -failed_to_resolve_with(_,_);
@@ -200,7 +200,7 @@ starting_up.
 
 +!hon : should_reverse(them) & road(_,_,_,_) & not road(_,_,occupied(_),_)
     <-  .print("Other person is reversing! I will exit HON");
-        -flashed;
+        -flashed(_);
         -should_reverse(_);
         -hon_negotiating(_);
         -failed_to_resolve_with(_,_);
@@ -937,6 +937,12 @@ starting_up.
 
 //RESOLVE: WAITING ACTIONS.
 
+//When the wait timer is up and there is a driver blocking the way still, but the passing place ahead freed up.
++!resolve : wait_for(0) & road(_,_,occupied(Driver),_) & pass(_,_,free,_)
+    <-  .print("Passing place ahead is now free. Abandoning wait");
+        -wait_for(_);
+        !resolve.
+
 //When the wait timer is up and there is still a driver blocking the way, begin reversing.
 +!resolve : wait_for(0) & road(_,_,occupied(Driver),_) & pass_found(_)
     <-  .print("No longer waiting. Starting to reverse");
@@ -1189,7 +1195,7 @@ starting_up.
         !hon.
 
 +!reverse : flashed
-    <-  -flashed;
+    <-  -flashed(_);
         !reverse.
 
 //While reversing, if there is a driver behind, wait for them to get out of the way.
@@ -1206,9 +1212,10 @@ starting_up.
 +!reverse : road(_,_,_,has_pass(left)) & pass(X,Y,free,_)
     <-  pullin(X,Y);
         .wait(1000);
-        ?resolving_with(Driver);
-        +waiting_for(Driver);
-        +not_arrived_yet(Driver);
+        if(resolving_with(Driver)) {
+            +waiting_for(Driver);
+            +not_arrived_yet(Driver);
+        };
         +in_pass(left).
 
         
@@ -1293,7 +1300,10 @@ starting_up.
 
 //While waiting for pass, if the passing place becomes free, go back to reversing then resolving.
 +!waiting_for_pass : pass(_,_,free,_)
-    <-  .print("Passing place freed up! Resuming resolving scenario.").
+    <-  .print("Passing place freed up! Resuming resolving scenario.");
+        while(flashed(Driver)[source(A)]) {
+            -flashed(Driver);
+        }.
 
 //REVISIT: Possibly do something about free road here too.
 //While waiting for pass, keep checking ahead and waiting.
