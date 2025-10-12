@@ -83,16 +83,23 @@ vision_dist(3).
 +!resolve : crawl_check_infront
     <-  .print("I do not see the passing place in front of me. Waiting for the other person to use it.");
         -crawl_check_infront;
+        ?facing(Dir);
+        check_ahead(2, Dir);
+        .wait(500);
         !resolve.
 
-+!resolve : crawl_check_roadclear & road(_,_,occupied(Driver),has_pass(_))
++!resolve : crawl_check_roadclear & road(_,_,occupied(_),has_pass(_))
     <-  .print("Oncoming driver is waiting by passing place! Crawling to passing place");
         -crawl_check_roadclear;
+        ?facing(Dir);
+        check_ahead(1, Dir);
         !resolve.
 
 +!resolve : crawl_check_roadclear & not road(_,_,occupied(Driver),_)
     <-  .print("Oncoming driver got out of the way! Crawling to passing place.");
         -crawl_check_roadclear;
+        ?facing(Dir);
+        check_ahead(1, Dir);
         !resolve.
 
 
