@@ -72,13 +72,45 @@ vision_dist(3).
         //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         +last_pass(X,1,free,has_pass(Side)).
 
+//Crawl_check_infront and crawl_check_roadclear are needed for a specific bug in Scenario 7: 
+//If agents see a passing place ahead of themselves and beging crawling forward, they check 1 space in front. But the 2 agents are 2 spaces from each other, and they will step through each other.
++!resolve : crawl_check_infront & road(_,_,_,has_pass(_))
+    <-  .print("Pass is right in front of me. Getting ready to resolve.");
+        -crawl_check_infront;
+        -crawl_check_roadclear;
+        !resolve.
+
++!resolve : crawl_check_infront
+    <-  .print("I do not see the passing place in front of me. Waiting for the other person to use it.");
+        -crawl_check_infront;
+        !resolve.
+
++!resolve : crawl_check_roadclear & road(_,_,occupied(Driver),has_pass(_))
+    <-  .print("Oncoming driver is waiting by passing place! Crawling to passing place");
+        -crawl_check_roadclear;
+        !resolve.
+
++!resolve : crawl_check_roadclear & not road(_,_,occupied(Driver),_)
+    <-  .print("Oncoming driver got out of the way! Crawling to passing place.");
+        -crawl_check_roadclear;
+        !resolve.
 
 
++!resolve : crawl_check_roadclear
+    <-  .print("Waiting on path to passing place to be cleared");
+        ?facing(Dir);
+        check_ahead(2, Dir);
+        .wait(500);
+        !resolve.
 
 +!resolve : crawl_forward(leftPas) & road(_,_,_,has_pass(left)) & pass(X,Y,free,_)
     <-  pullin(X,Y);
         +in_pass(left);
         -crawl_forward(leftPas);
+        !resolve.
+
++!resolve : crawl_forward(leftPas) & road(_,_,_,has_pass(left)) & pass(X,Y,occupied(_),_)
+    <-  -crawl_forward(leftPas);
         !resolve.
 
 
@@ -136,21 +168,24 @@ vision_dist(3).
         check_ahead(Vis, Dir);
         !resolve.
 
+
+
+
 +!resolve : not road(_,_,occupied(D),_)
     <-  -resolving_with(D).
 
-
-+!resolve : road(_,_,_,has_pass(left)) & pass(_,_,free,_)
-    <- +crawl_forward(leftPas);
-    ?facing(Dir);
-    check_ahead(1, Dir);
-    !resolve.
-
-+!resolve : road(_,_,_,has_pass(right))
-    <- +crawl_forward(rightPas);
-    ?facing(Dir);
-    check_ahead(1, Dir);
-    !resolve.
++!resolve : road(_,_,_,has_pass(Side)) & pass(_,_,free,_)
+    <-  +crawl_check_roadclear;
+        +crawl_check_infront;
+        if (Side=left) {
+            +crawl_forward(leftPas);
+        } else {
+            +crawl_forward(rightPas);
+        }
+        ?facing(Dir);
+        check_ahead(1, Dir);
+        .wait(500);
+        !resolve.
     
 
 //If standing right next to pass
