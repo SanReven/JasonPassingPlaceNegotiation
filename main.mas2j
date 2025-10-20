@@ -81,12 +81,12 @@ V2 Questionnaire agents - higher order negotiation
 MAS main {
 
     //(world option number, number of agents)
-    environment: example.Env(410,4)
+    environment: example.Env(504,2)
 
     agents: //driver #4;
             //driverq_nocomm #4;
-            driverq_comm #4;
-            //driverq_hon #4;
+            //driverq_comm #4;
+            driverq_hon #2;
 
     aslSourcePath: "src/agt";
 }
