@@ -72,8 +72,9 @@ vision_dist(3).
         //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         +last_pass(X,1,free,has_pass(Side)).
 
-//crawl_check_roadclear is needed for a specific bug in Scenario 7: 
+//crawl_check_roadclear and crawl_blocked are needed for a specific bug in Scenario 7: 
 //If agents see a passing place ahead of themselves and beging crawling forward, they check 1 space in front. But the 2 agents are 2 spaces from each other, and they will step through each other.
+//This solution ensures that agents do not begin crawling forward if an agent is closer than the passing place.
 +!resolve : crawl_blocked & not road(_,_,occupied(Driver),_)
     <-  .print("Oncoming driver got out of the way! Crawling to passing place.");
         -crawl_blocked;
