@@ -71,105 +71,6 @@ public class Env extends Environment {
         view  = new RoadView(model);
         model.setView(view);
         updatePercepts();
-
-        view.addKeyListener(new KeyListener() {
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                //logger.info("KEY PRESSED");
-                if(agentNameIdDict.containsKey("player")) {
-                    int agID = agentNameIdDict.get("player");
-                    int keyPressed = e.getKeyCode();
-                    Location agLoc = model.getAgPos(agID);
-    
-                    //Player always facing right.
-                    //Currently using setAgPos all over to make less calculations.
-                    //Code adapted from: https://stackoverflow.com/questions/10876491/how-to-use-keylistener (User Abhishek Choudhary)
-                    switch(keyPressed) {
-                        case KeyEvent.VK_RIGHT:
-                            if (model.hasObject(PASS, agLoc)) {
-                                if(model.hasObject(ROAD, agLoc.x + 1, agLoc.y - 1) && model.getAgAtPos(agLoc.x + 1, agLoc.y - 1) == -1) {
-                                    model.setAgPos(agID, agLoc.x + 1, agLoc.y - 1);
-                                } else if (model.hasObject(ROAD, agLoc.x + 1, agLoc.y + 1) && model.getAgAtPos(agLoc.x + 1, agLoc.y + 1) == -1) {
-                                    model.setAgPos(agID, agLoc.x + 1, agLoc.y + 1);
-                                } else {
-                                    logger.info("PATH BLOCKED");
-                                }
-                            } else {
-                                if(model.getAgAtPos(agLoc.x + 1, agLoc.y) == -1) {
-                                    //addPercept("player", Literal.parseLiteral("input_go_forward"));
-                                    model.setAgPos(agID, agLoc.x + 1, agLoc.y);
-                                } else {
-                                    logger.info("PATH BLOCKED");
-                                }
-                            }
-                            break;
-                        case KeyEvent.VK_LEFT:
-                        if (model.hasObject(PASS, agLoc)) {
-                            if(model.hasObject(ROAD, agLoc.x - 1, agLoc.y - 1) && model.getAgAtPos(agLoc.x - 1, agLoc.y - 1) == -1) {
-                                model.setAgPos(agID, agLoc.x - 1, agLoc.y - 1);
-                            } else if (model.hasObject(ROAD, agLoc.x - 1, agLoc.y + 1) && model.getAgAtPos(agLoc.x - 1, agLoc.y + 1) == -1) {
-                                model.setAgPos(agID, agLoc.x - 1, agLoc.y + 1);
-                            } else {
-                                logger.info("PATH BLOCKED");
-                            }
-                        } else {
-                            if(model.getAgAtPos(agLoc.x - 1, agLoc.y) == -1) {
-                                //addPercept("player", Literal.parseLiteral("input_go_backward));
-                                model.setAgPos(agID, agLoc.x - 1, agLoc.y);
-                            } else {
-                                logger.info("PATH BLOCKED");
-                            }
-                        }
-                        break;
-                        case KeyEvent.VK_UP:
-                            //Can only go into PASS if before or after it. A car can't slide sideways.
-                            Location forwardUP = new Location(agLoc.x + 1, agLoc.y - 1);
-                            Location backwardUP = new Location(agLoc.x - 1, agLoc.y - 1);
-                            if(model.hasObject(PASS, forwardUP) && model.getAgAtPos(forwardUP) == -1) {
-                                //addPercept("player", Literal.parseLiteral("input_pull_in(" forward.x + "," + forward.y + ")"));
-                                model.setAgPos(agID, agLoc.x + 1, agLoc.y - 1);
-                            } else if (model.hasObject(PASS, backwardUP) && model.getAgAtPos(backwardUP) == -1){
-                                //addPercept("player", Literal.parseLiteral("input_pull_in(" backward.x + "," + backward.y + ")"));
-                                model.setAgPos(agID, agLoc.x - 1, agLoc.y - 1);
-                            } else {
-                                logger.info("NO AVAILABLE PASSING PLACE");
-                            }
-                            break;
-                        case KeyEvent.VK_DOWN:
-                            Location forwardDOWN = new Location(agLoc.x + 1, agLoc.y + 1);
-                            Location backwardDOWN = new Location(agLoc.x - 1, agLoc.y + 1);
-                            if(model.hasObject(PASS, forwardDOWN) && model.getAgAtPos(forwardDOWN) == -1) {
-                                //addPercept("player", Literal.parseLiteral("input_pull_in(" forward.x + "," + forward.y + ")"));
-                                model.setAgPos(agID, agLoc.x + 1, agLoc.y + 1);
-                            } else if (model.hasObject(PASS, backwardDOWN) && model.getAgAtPos(backwardDOWN) == -1) {
-                                //addPercept("player", Literal.parseLiteral("input_pull_in(" backward.x + "," + backward.y + ")"));
-                                model.setAgPos(agID, agLoc.x - 1, agLoc.y + 1);
-                            } else {
-                                logger.info("NO AVAILABLE PASSING PLACE");
-                            }
-                            break;
-                        default:
-                            logger.info("NOT VALID KEY. USE ARROW KEYS");
-                            break;
-                    }
-                } else {
-                    logger.info("NO PLAYER AGENT FOUND");
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                ;
-            }
-
-            @Override
-            public void keyTyped(KeyEvent e) {
-                ;
-            }
-        });
-    
-
     }
 
     //Duplicate without parsing until we get parsing working
@@ -236,7 +137,6 @@ public class Env extends Environment {
 
 
     /** creates the agents perception based on the the road */
-    //We might not need this at all
     void updatePercepts() {
         for (String agName : agentNameIdDict.keySet()) {
             int agID = agentNameIdDict.get(agName);
@@ -265,6 +165,7 @@ public class Env extends Environment {
         super.stop();
     }
 
+    //Method for agents to check the spaces ahead of themselves based on which they are facing and how far ahead they are looking. Uses checkLocation for detailed information.
     public void checkAhead(String agName, int viewDist, Direct facing) throws Exception {
         Location agLoc = model.getAgPos(agentNameIdDict.get(agName));
         
@@ -283,6 +184,7 @@ public class Env extends Environment {
         }
     }
 
+    //Method for agents to check the spaces behind themselves. Similar to check ahead, but mirrored, with respect to which way left and right is for the agent.
     public void checkBehind(String agName, int viewDist, Direct facing) throws Exception {
         Location agLoc = model.getAgPos(agentNameIdDict.get(agName));
         
@@ -300,8 +202,9 @@ public class Env extends Environment {
         }
     }
 
+    //Compiles and returns detailed information on the currently viewed space.
+    //Information includes: Coordinates of space, whether there is any road, whether the road is occupied and by who, and if there are any passing places adjecent to the road.
     public void checkLocation(int x, int y, String agName, int directionCoef) throws Exception {
-        //logger.info("checking position (" + x + "," + y + ")");
 
         boolean agentFound = false;
 
@@ -315,10 +218,9 @@ public class Env extends Environment {
 
         int otherAg = model.getAgAtPos(x, y);
 
-        //If there is an agent there
+        //If there is an agent there:
         if (otherAg >= 0) {
-            //TEMPORARY SOLUTION WITH HASHMAPS. LATER REPLACE THIS WITH GETTING THE AGENT OBJECT AND USING findBel(facing, Dir)
-            //Currently don't know how to get an agent object from string/id.
+            //There seems to be no known way on how to get an agent object from string/id alone. Implemented a hashmap solution in its place instead.
             String otherName = agentNameIdInverse.get(otherAg);
             String facing = agentDirDict.get(otherName).toString();
             Literal driverDet = Literal.parseLiteral("driver_detected(" + otherName + "," + facing + ")");
@@ -337,7 +239,6 @@ public class Env extends Environment {
             }
             Literal road = Literal.parseLiteral("road(" + x + "," + y + "," + occupied + "," + pass + ")");
             addPercept(agName, road);
-            //logger.info(road.toString());
         } else if (model.hasObject(PASS, x, y)) {
             //If facing left, a pass on the left should be (2 + (- 1)). If facing right, a pass on the left should be (0 + 1).
             if ((y + directionCoef) == 1) {
@@ -348,34 +249,14 @@ public class Env extends Environment {
 
             Literal road = Literal.parseLiteral("pass(" + x + "," + y + "," + occupied + "," + pass + ")");
             addPercept(agName, road);
-            //logger.info(road.toString());
         } else {
             ;
-            //Add no percept for now.
+            //No percept addition is needed here as of now.
         }
     }
 
-    /*public void lookAround(String agName, int viewDist, Direct facing) {
-        Location agLoc = model.getAgPos(agentNameIdDict.get(agName));
-        
-        clearPercepts(agName);
-        int coef = 1;
-
-        if (facing == Direct.right) {
-            coef = -1;
-        }
-
-        for (int i = 1; i < viewDist + 1; i++) {
-            checkLocation(agLoc.x + coef, agLoc.y, agName, (coef * (-1)));
-            checkLocation(agLoc.x + coef, agLoc.y + 1, agName, (coef * (-1)));
-            checkLocation(agLoc.x + coef, agLoc.y - 1, agName, (coef * (-1)));
-        
-            checkLocation(agLoc.x - coef, agLoc.y, agName, (coef * (-1)));
-            checkLocation(agLoc.x - coef, agLoc.y + 1, agName, (coef * (-1)));
-            checkLocation(agLoc.x - coef, agLoc.y - 1, agName, (coef * (-1)));
-        }
-    }*/
-
+    
+    //Method to pull out of a passing place, placing the agent one step forward and onto the road.
     public void pullOut(String agName, Direct facing) throws Exception {
         clearPercepts(agName);
         updatePercepts();
@@ -409,330 +290,155 @@ public class Env extends Environment {
             // initial location of agents and Passing places based on world type
 
             switch(worldType) {
-                //Q4 Scenario. 2 Cars, PASS in middle to left of d1.
+                //HIGHWAY CODE AGENTS
+                //S1: 2 Cars, PASS in middle to left of d1. Simple common scenario where two drivers meet around a passing place.
+                //(Q4 in questionnaire based on this)
                 case 1:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
-                //EXTRA Scenario. 2 Cars, PASS behind to left of d1.
+                //S2: 2 Cars, PASS behind to left of d1. Also simple common scenario where two drivers meet but not near a passing place. As in the Highway Code, someone has to reverse.
+                //(Q6 based on this)
                 case 2:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
                     add(PASS, 2, 0);
                     break;
-                //Q5 Scenario. 2 Cars, PASS behind to right of d1.
+                //S3: 2 Cars, PASS behind to right of d1. Additional scenario based on S2, exploring how would the resolution change if the passing place is on the opposite side of the driver reversing.
+                //(Q5 based on this)
                 case 3:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
                     add(PASS, 2, 2);
                     break;
-                //Q6 Scenario. 2 Cars, PASS behind to left of d2. d2 CAN reverse.
+                //S4: 2 Cars, PASS behind to left of d1 AND PASS behind to the right of d2. Additional scenario, exploring how agents would resolve the scenario if both agents were equal distance from the passing place.
                 case 4:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
-                    add(PASS, 10, 2);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
+                    add(PASS, 10, 0);
+                    add(PASS, 2, 0);
                     break;
-                //EXTRA Scenario. 2 Cars, PASS behind to left of d1 AND PASS behind to the right of d2.
+                //S5: 3 Cars, PASS in middle to left of d1, extra car behind d2. Expanding on S1, but now there are 3 agents present.
                 case 5:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
-                    add(PASS, 10, 0);
-                    add(PASS, 2, 0);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverhc2", Direct.left);
+                    addDriver(2, RoadSize - 1, 1, "driverhc3", Direct.left);
+                    add(PASS, RoadSize/2, 0);
                     break;
-                //EXTRA Scenario. 2 Cars, no PASS.
+                //S6: 3 Cars, PASS in middle to right of d1, extra car behind d2. Modification of S5, exploring how the resolution would differ if the passing place was opposite the lone driver.
+                //(Q7 based on this)
                 case 6:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverhc2", Direct.left);
+                    addDriver(2, RoadSize - 1, 1, "driverhc3", Direct.left);
+                    add(PASS, RoadSize/2, 2);
                     break;
-                //EXTRA Scenario. 3 Cars, PASS in middle to left of d1, extra car behind d2.
+                //S7: 3 Cars, PASS behind to left of d1, extra car behind d1. Exploring how two agents can manage reversing together to a passing place and manage the scenario around it.
+                //As stated in online guides, there is a risk of more drivers approaching from behind when reversing, and drivers need to be cautious while reversing as such.
+                //(Q9 based on this)
                 case 7:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driver2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driver3", Direct.left);
-                    add(PASS, RoadSize/2, 0);
+                    addDriver(0, 2, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
+                    addDriver(2, 0, 1, "driverhc3", Direct.right);
+                    add(PASS, 2, 0);
                     break;
-                //Q7 Scenario. 3 Cars, PASS in middle to right of d1, extra car behind d2.
+                //S8: 3 cars, PASS in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1. Expanded S7, exploring if the resolution changes with more passing places.
                 case 8:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driver2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driver3", Direct.left);
-                    add(PASS, RoadSize/2, 2);
+                    addDriver(0, 2, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
+                    addDriver(2, 0, 1, "driverhc3", Direct.right);
+                    add(PASS, 5, 0);
+                    add(PASS, 3, 0);
+                    add(PASS, 9, 2);
                     break;
-                //Q9 Scenario: 3 Cars, PASS behind to left of d1, extra car behind d1.
+                //S9: 4 Cars, PASS in middle to right of d1. Expansion of S1/S5, now with 4 agents around 1 passing place.
+                //(Q8 based on this)
                 case 9:
-                    addDriver(0, 2, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
-                    addDriver(2, 0, 1, "driver3", Direct.right);
-                    add(PASS, 2, 0);
+                    addDriver(0, 2, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
+                    addDriver(2, 0, 1, "driverhc3", Direct.right);
+                    addDriver(3, RoadSize - 3, 1, "driverhc4", Direct.left);
+                    add(PASS, RoadSize/2, 2);
                     break;
-                //EXTRA Scenario: 3 cars, PASS in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1.
+                //S10: 4 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d3. Expansion of S9, now with 3 passing places, exploring how more passing places can alter the resolution if at all.
                 case 10:
-                    addDriver(0, 2, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
-                    addDriver(2, 0, 1, "driver3", Direct.right);
-                    add(PASS, 5, 0);
-                    add(PASS, 3, 0);
-                    add(PASS, 9, 2);
-                    break;
-                //Q8 Scenario: 4 Cars, PASS in middle to right of d1.
-                case 11:
-                    addDriver(0, 2, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
-                    addDriver(2, 0, 1, "driver3", Direct.right);
-                    addDriver(3, RoadSize - 3, 1, "driver4", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    break;
-                //EXTRA Scenario: 4 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d3.
-                case 12:
-                    addDriver(0, 2, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driver2", Direct.left);
-                    addDriver(2, 0, 1, "driver3", Direct.right);
-                    addDriver(3, RoadSize - 1, 1, "driver4", Direct.left);
+                    addDriver(0, 2, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverhc2", Direct.left);
+                    addDriver(2, 0, 1, "driverhc3", Direct.right);
+                    addDriver(3, RoadSize - 1, 1, "driverhc4", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     add(PASS, 2, 0);
                     add(PASS, 10, 2);
                     break;
-                //Q8 Scenario: 6 Cars, PASS in middle to right of d1.
-                case 13:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, 2, 1, "driver2", Direct.right);
-                    addDriver(2, 4, 1, "driver3", Direct.right);
-                    addDriver(5, RoadSize - 5, 1, "driver4", Direct.left);
-                    addDriver(4, RoadSize - 3, 1, "driver5", Direct.left);
-                    addDriver(3, RoadSize - 1, 1, "driver6", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    break;
-                //EXTRA Scenario: 6 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d4.
-                case 14:
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, 2, 1, "driver2", Direct.right);
-                    addDriver(2, 4, 1, "driver3", Direct.right);
-                    addDriver(5, RoadSize - 5, 1, "driver4", Direct.left);
-                    addDriver(4, RoadSize - 3, 1, "driver5", Direct.left);
-                    addDriver(3, RoadSize - 1, 1, "driver6", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    add(PASS, 3, 0);
-                    add(PASS, 10, 2);
-                    break;
-                //SCENARIOS WITH HUMAN CONTROLLED AGENT. D1 IS REPLACED BY Player
-                //Q4 Scenario. 2 Cars, PASS in middle to left of d1.
+
+                //QUESTIONNAIRE AGENTS
+                //Questionnaire - No communication agents
+                //S1: 2 Cars, PASS in middle to left of d1.
                 case 101:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver", Direct.left);
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
-                //EXTRA Scenario. 2 Cars, PASS behind to left of d1.
+                //S2: 2 Cars, PASS behind to left of d1.
                 case 102:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver", Direct.left);
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
                     add(PASS, 2, 0);
                     break;
-                //Q5 Scenario. 2 Cars, PASS behind to right of d1.
+                //S3: 2 Cars, PASS behind to right of d1.
                 case 103:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver", Direct.left);
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
                     add(PASS, 2, 2);
                     break;
-                //Q6 Scenario. 2 Cars, PASS behind to left of d2. d2 CAN reverse.
+                //S4: 2 Cars, PASS behind to left of d1 AND PASS behind to the right of d2.
                 case 104:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver", Direct.left);
-                    add(PASS, 10, 2);
-                    break;
-                //EXTRA Scenario. 2 Cars, PASS behind to left of d1 AND PASS behind to the right of d2.
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
+                    add(PASS, 10, 0);
+                    add(PASS, 2, 0);
+                break;
+                //S5: 3 Cars, PASS in middle to left of d1, extra car behind d2.
                 case 105:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver", Direct.left);
-                    add(PASS, 10, 0);
-                    add(PASS, 2, 0);
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverq_nocomm2", Direct.left);
+                    addDriver(2, RoadSize - 1, 1, "driverq_nocomm3", Direct.left);
+                    add(PASS, RoadSize/2, 0);
                     break;
-                //EXTRA Scenario. 2 Cars, no PASS.
+                //S6: 3 Cars, PASS in middle to right of d1, extra car behind d2.
                 case 106:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver", Direct.left);
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 3, 1, "driverq_nocomm2", Direct.left);
+                    addDriver(2, RoadSize - 1, 1, "driverq_nocomm3", Direct.left);
+                    add(PASS, RoadSize/2, 2);
                     break;
-                //EXTRA Scenario. 3 Cars, PASS in middle to left of d1, extra car behind d2.
+                //S7: 3 Cars, PASS behind to left of d1, extra car behind d1.
                 case 107:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driver1", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driver2", Direct.left);
-                    add(PASS, RoadSize/2, 0);
+                    addDriver(0, 2, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
+                    addDriver(2, 0, 1, "driverq_nocomm3", Direct.right);
+                    add(PASS, 2, 0);
                     break;
-                //Q7 Scenario. 3 Cars, PASS in middle to right of d1, extra car behind d2.
+                //S8: 3 cars, PASS in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1.
                 case 108:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driver1", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driver2", Direct.left);
-                    add(PASS, RoadSize/2, 2);
+                    addDriver(0, 2, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
+                    addDriver(2, 0, 1, "driverq_nocomm3", Direct.right);
+                    add(PASS, 5, 0);
+                    add(PASS, 3, 0);
+                    add(PASS, 9, 2);
                     break;
-                //Q9 Scenario: 3 Cars, PASS behind to left of d1, extra car behind d1.
+                //S9: 4 Cars, PASS in middle to right of d1.
                 case 109:
-                    addDriver(0, 4, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver1", Direct.left);
-                    addDriver(2, 2, 1, "driver2", Direct.right);
-                    add(PASS, 3, 0);
-                    break;
-                //EXTRA Scenario: 3 cars, PASS in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1.
-                case 110:
-                    addDriver(0, 4, 1, "player", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver1", Direct.left);
-                    addDriver(2, 2, 1, "driver2", Direct.right);
-                    add(PASS, RoadSize/2, 0);
-                    add(PASS, 3, 0);
-                    add(PASS, 10, 2);
-                    break;
-                //Q8 Scenario: 4 Cars, PASS in middle to right of d1.
-                case 111:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, 2, 1, "driver2", Direct.right);
-                    addDriver(3, RoadSize - 1, 1, "driver1", Direct.left);
-                    addDriver(4, RoadSize - 3, 1, "driver3", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    break;
-                //EXTRA Scenario: 4 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d2.
-                case 112:
-                    addDriver(0, 0, 1, "player", Direct.right);
-                    addDriver(1, 2, 1, "driver2", Direct.right);
-                    addDriver(3, RoadSize - 1, 1, "driver1", Direct.left);
-                    addDriver(4, RoadSize - 3, 1, "driver3", Direct.left);
-                    add(PASS, RoadSize/2, 0);
-                    add(PASS, 3, 0);
-                    add(PASS, 10, 2);
-                    break;
-                case 201:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    add(PASS, RoadSize/2, 0);
-                    break;
-                case 202:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    add(PASS, 2, 0);
-                    break;
-                case 203:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    add(PASS, 2, 2);
-                    break;
-                case 204:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    add(PASS, 10, 2);
-                    break;
-                case 205:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    add(PASS, 10, 0);
-                    add(PASS, 2, 0);
-                break;
-                case 206:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    break;
-                case 207:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driverquestion2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driverquestion3", Direct.left);
-                    add(PASS, RoadSize/2, 0);
-                    break;
-                case 208:
-                    addDriver(0, 0, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driverquestion2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driverquestion3", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    break;
-                case 209:
-                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
-                    add(PASS, 2, 0);
-                    break;
-                case 210:
-                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
-                    add(PASS, 5, 0);
-                    add(PASS, 3, 0);
-                    add(PASS, 9, 2);
-                    break;
-                case 211:
-                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
-                    addDriver(3, RoadSize - 3, 1, "driverquestion4", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    break;
-                case 212:
-                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driverquestion2", Direct.left);
-                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
-                    addDriver(3, RoadSize - 1, 1, "driverquestion4", Direct.left);
-                    add(PASS, RoadSize/2, 0);
-                    add(PASS, 2, 0);
-                    add(PASS, 10, 2);
-                    break;
-                case 213:
-                    addDriver(0, 2, 1, "driverquestion1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverquestion2", Direct.left);
-                    addDriver(2, 0, 1, "driverquestion3", Direct.right);
-                    add(PASS, 2, 2);
-                    break;
-                case 301:
-                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
-                    add(PASS, RoadSize/2, 0);
-                    break;
-                case 302:
-                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
-                    add(PASS, 2, 0);
-                    break;
-                case 303:
-                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
-                    add(PASS, 2, 2);
-                    break;
-                case 304:
-                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
-                    add(PASS, 10, 0);
-                    add(PASS, 2, 0);
-                break;
-                case 305:
-                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driverq_nocomm2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driverq_nocomm3", Direct.left);
-                    add(PASS, RoadSize/2, 0);
-                    break;
-                case 306:
-                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 3, 1, "driverq_nocomm2", Direct.left);
-                    addDriver(2, RoadSize - 1, 1, "driverq_nocomm3", Direct.left);
-                    add(PASS, RoadSize/2, 2);
-                    break;
-                case 307:
-                    addDriver(0, 2, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
-                    addDriver(2, 0, 1, "driverq_nocomm3", Direct.right);
-                    add(PASS, 2, 0);
-                    break;
-                case 308:
-                    addDriver(0, 2, 1, "driverq_nocomm1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
-                    addDriver(2, 0, 1, "driverq_nocomm3", Direct.right);
-                    add(PASS, 5, 0);
-                    add(PASS, 3, 0);
-                    add(PASS, 9, 2);
-                    break;
-                case 309:
                     addDriver(0, 2, 1, "driverq_nocomm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
                     addDriver(2, 0, 1, "driverq_nocomm3", Direct.right);
                     addDriver(3, RoadSize - 3, 1, "driverq_nocomm4", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
-                case 310:
+                //S10: 4 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d3.
+                case 110:
                     addDriver(0, 2, 1, "driverq_nocomm1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_nocomm2", Direct.left);
                     addDriver(2, 0, 1, "driverq_nocomm3", Direct.right);
@@ -741,46 +447,56 @@ public class Env extends Environment {
                     add(PASS, 2, 0);
                     add(PASS, 10, 2);
                     break;
-                case 401:
+
+                //Questionnaire - Communicative Agents
+                //S1: 2 Cars, PASS in middle to left of d1.
+                case 201:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
-                case 402:
+                //S2: 2 Cars, PASS behind to left of d1.
+                case 202:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     add(PASS, 2, 0);
                     break;
-                case 403:
+                //S3: 2 Cars, PASS behind to right of d1.
+                case 203:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     add(PASS, 2, 2);
                     break;
-                case 404:
+                //S4: 2 Cars, PASS behind to left of d1 AND PASS behind to the right of d2.
+                case 204:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     add(PASS, 10, 0);
                     add(PASS, 2, 0);
                     break;
-                case 405:
+                //S5: 3 Cars, PASS in middle to left of d1, extra car behind d2.
+                case 205:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_comm2", Direct.left);
                     addDriver(2, RoadSize - 1, 1, "driverq_comm3", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
-                case 406:
+                //S6: 3 Cars, PASS in middle to right of d1, extra car behind d2.
+                case 206:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_comm2", Direct.left);
                     addDriver(2, RoadSize - 1, 1, "driverq_comm3", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
-                case 407:
+                //S7: 3 Cars, PASS behind to left of d1, extra car behind d1.
+                case 207:
                     addDriver(0, 2, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     addDriver(2, 0, 1, "driverq_comm3", Direct.right);
                     add(PASS, 2, 0);
                     break;
-                case 408:
+                //S8: 3 cars, PASS in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1.
+                case 208:
                     addDriver(0, 2, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     addDriver(2, 0, 1, "driverq_comm3", Direct.right);
@@ -788,14 +504,16 @@ public class Env extends Environment {
                     add(PASS, 3, 0);
                     add(PASS, 9, 2);
                     break;
-                case 409:
+                //S9: 4 Cars, PASS in middle to right of d1.
+                case 209:
                     addDriver(0, 2, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
                     addDriver(2, 0, 1, "driverq_comm3", Direct.right);
                     addDriver(3, RoadSize - 3, 1, "driverq_comm4", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
-                case 410:
+                //S10: 4 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d3.
+                case 210:
                     addDriver(0, 2, 1, "driverq_comm1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_comm2", Direct.left);
                     addDriver(2, 0, 1, "driverq_comm3", Direct.right);
@@ -804,46 +522,56 @@ public class Env extends Environment {
                     add(PASS, 2, 0);
                     add(PASS, 10, 2);
                     break;
-                case 501:
+                
+                //Questionnaire - Higher Order Negotiation Agents
+                //S1: 2 Cars, PASS in middle to left of d1.
+                case 301:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
-                case 502:
+                //S2: 2 Cars, PASS behind to left of d1.
+                case 302:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     add(PASS, 2, 0);
                     break;
-                case 503:
+                //S3: 2 Cars, PASS behind to right of d1.
+                case 303:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     add(PASS, 2, 2);
                     break;
-                case 504:
+                //S4: 2 Cars, PASS behind to left of d1 AND PASS behind to the right of d2.
+                case 304:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     add(PASS, 10, 0);
                     add(PASS, 2, 0);
                     break;
-                case 505:
+                //S5: 3 Cars, PASS in middle to left of d1, extra car behind d2.
+                case 305:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_hon2", Direct.left);
                     addDriver(2, RoadSize - 1, 1, "driverq_hon3", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
-                case 506:
+                //S6: 3 Cars, PASS in middle to right of d1, extra car behind d2.
+                case 306:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_hon2", Direct.left);
                     addDriver(2, RoadSize - 1, 1, "driverq_hon3", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
-                case 507:
+                //S7: 3 Cars, PASS behind to left of d1, extra car behind d1.
+                case 307:
                     addDriver(0, 2, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     addDriver(2, 0, 1, "driverq_hon3", Direct.right);
                     add(PASS, 2, 0);
                     break;
-                case 508:
+                //S8: 3 cars, PASS in middle to the left of d1 AND behind to the left of d1 AND behind to the left of d2, extra car behind d1.
+                case 308:
                     addDriver(0, 2, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
                     addDriver(2, 0, 1, "driverq_hon3", Direct.right);
@@ -851,14 +579,16 @@ public class Env extends Environment {
                     add(PASS, 3, 0);
                     add(PASS, 9, 2);
                     break;
-                case 509:
+                //S9: 4 Cars, PASS in middle to right of d1.
+                case 309:
                     addDriver(0, 2, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_hon2", Direct.left);
                     addDriver(2, 0, 1, "driverq_hon3", Direct.right);
                     addDriver(3, RoadSize - 1, 1, "driverq_hon4", Direct.left);
                     add(PASS, RoadSize/2, 2);
                     break;
-                case 510:
+                //S10: 4 Cars, PASS in middle to right of d1 AND behind to the left of d1 AND behind to the left of d3.
+                case 310:
                     addDriver(0, 2, 1, "driverq_hon1", Direct.right);
                     addDriver(1, RoadSize - 3, 1, "driverq_hon2", Direct.left);
                     addDriver(2, 0, 1, "driverq_hon3", Direct.right);
@@ -867,10 +597,11 @@ public class Env extends Environment {
                     add(PASS, 2, 0);
                     add(PASS, 10, 2);
                     break;
+
                 //Default: 2 cars, PASS in middle to left of d1.
                 default: 
-                    addDriver(0, 0, 1, "driver1", Direct.right);
-                    addDriver(1, RoadSize - 1, 1, "driver2", Direct.left);
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
                     add(PASS, RoadSize/2, 0);
                     break;
             }
@@ -908,6 +639,7 @@ public class Env extends Environment {
             }
         }
 
+        //Method for agents to take a step forward
         public void moveForward(String agName, Direct facing) throws Exception {
             int agID = agentNameIdDict.get(agName);
             int coef = 1;
@@ -934,6 +666,7 @@ public class Env extends Environment {
             updatePercepts();
         }
 
+        //Basic function to move agents to a specified space.
         public void moveTo(String agName, Location newLoc) throws Exception {
             int agID = agentNameIdDict.get(agName);
     
@@ -978,7 +711,8 @@ public class Env extends Environment {
         public void drawAgent(Graphics g, int x, int y, Color c, int id) {
             String label = "D"+(id+1);
             c = Color.red;
-            if (id == 0) {
+            Direct agentDir = agentDirDict.get(agentNameIdInverse.get(id));
+            if (agentDir == Direct.right) {
                 c = Color.blue;
             }
 
