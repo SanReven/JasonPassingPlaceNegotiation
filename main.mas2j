@@ -61,12 +61,12 @@ To change scenarios:
 MAS main {
 
     //(world option number, number of agents)
-    environment: example.Env(307,3)
+    environment: example.Env(108,3)
 
     agents: //driverhc #4;
-            //driverq_nocomm #4;
-            //driverq_comm #4;
-            driverq_hon #3;
+            driverq_nocomm #3;
+            //driverq_comm #3;
+            //driverq_hon #4;
 
     aslSourcePath: "src/agt";
 }
