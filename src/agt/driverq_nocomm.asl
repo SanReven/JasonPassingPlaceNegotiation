@@ -42,7 +42,6 @@ vision_dist(3).
 +!drive : pos(_, X,Y) & roadEnd(X,Y)
     <-  .my_name(A);
         .print("I have reached my destination. Goodbye!");
-        //Temporary solution to get agents out of the way
         remove_me;
         .kill_agent(A).
 
@@ -55,15 +54,6 @@ vision_dist(3).
     <-  -following(Driver);
         !resolve;
         !drive.
-
-//While driving and there is another driver ahead that I am already following
-//I will wait a second then continue driving. THIS IS HANDLED IN RESOLVE
-/*+!drive : road(_,_,occupied(Driver),_) & following(Driver)
-    <-  .wait(500);
-        ?vision_dist(Vis);
-        ?facing(Dir);
-        check_ahead(Vis,Dir);
-        !drive.*/ 
 
 
 //When driving and encountering another driver ahead.
@@ -197,96 +187,6 @@ vision_dist(3).
 
 
 //REMAINING RESOLVE ACTIONS
-
-//crawl_check_roadclear and crawl_blocked are needed for a specific bug in Scenario 7: 
-//If agents see a passing place ahead of themselves and beging crawling forward, they check 1 space in front. But the 2 agents are 2 spaces from each other, and they will step through each other.
-//This solution ensures that agents do not begin crawling forward if an agent is closer than the passing place.
-+!resolve : crawl_blocked(0) & pass_found(_)
-    <-  .print("I'm done waiting. I will reverse.");
-        -crawl_blocked(0);
-        -crawl_forward(_);
-        ?facing(Dir);
-        check_behind(1, Dir);
-        !reverse;
-        !resolve.
-
-
-+!resolve : crawl_blocked(0)
-    <-  .print("I can't reverse. I will have to wait");
-        -crawl_blocked(0);
-        +crawl_blocked(5);
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        !resolve.
-
-+!resolve : crawl_blocked(X) & not road(_,_,occupied(Driver),_)
-    <-  .print("Oncoming driver got out of the way! Crawling to passing place.");
-        -crawl_blocked(X);
-        ?facing(Dir);
-        check_ahead(1, Dir);
-        !resolve.
-
-+!resolve : crawl_blocked(X) & road(Xa,_,occupied(_),has_pass(_)) & not pass(Xa,_,occupied(_),_)
-    <-  .print("Oncoming driver is waiting at pass! Crawling to passing place.");
-        -crawl_blocked(X);
-        ?facing(Dir);
-        check_ahead(1, Dir);
-        !resolve.
-
-+!resolve : crawl_blocked(X)
-    <-  -crawl_blocked(X);
-        +crawl_blocked(X-1);
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        .wait(500);
-        !resolve.
-
-
-
-+!resolve : crawl_check_roadclear & crawl_passDist(P) & crawl_agentDist(A) & A<P
-    <-  .print("Road blocked by other agent. Waiting for path to be clear.");
-        -crawl_passDist(P);
-        -crawl_agentDist(A);
-        if(pass_found(Dist)) {
-            +crawl_blocked(5 + Dist);
-        } else {
-            +crawl_blocked(5);
-        }
-        -crawl_check_roadclear;
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        .wait(500);
-        !resolve.
-
-+!resolve : crawl_check_roadclear & pass(X,_,occupied(DriverA),_) & road(X,_,occupied(DriverB),has_pass(_))
-    <-  .print("Passing place is being used for resolution. Will stay clear of it.");
-        -crawl_passDist(_);
-        -crawl_agentDist(_);
-        if(pass_found(Dist)) {
-            +crawl_blocked(5 + Dist);
-        } else {
-            +crawl_blocked(5);
-        }
-        -crawl_check_roadclear;
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        .wait(500);
-        !resolve.
-
-+!resolve : crawl_check_roadclear
-    <-  .print("Path to passing place is clear. Crawling now.");
-        -crawl_agentDist(_);
-        -crawl_passDist(_);
-        -crawl_check_roadclear;
-        ?facing(Dir);
-        check_ahead(1, Dir);
-        !resolve.
-
-
 //While crawling forward to a passing place on the left, if the road is free and the passing place is just ahead.
 //Pull in to the passing place on the left.
 +!resolve : crawl_forward(leftPas) & road(_,_,_,has_pass(left)) & pass(X,Y,free,_)
@@ -296,15 +196,6 @@ vision_dist(3).
         .wait(1000);
         !resolve.
 
-
-//While crawling forward to a passing place on the left, if the road is occupied.
-//Abandon crawling forward, begin reversing.
-/*+!resolve : crawl_forward(leftPas) & road(_,_,occupied(Driver),_)
-    <- -crawl_forward(leftPas);
-        ?facing(Dir);
-        check_behind(1, Dir);
-        !reverse;
-        !resolve.*/
 
 
 //While crawling forward to a passing place on the left, if the road is occupied.
@@ -318,15 +209,6 @@ vision_dist(3).
         !resolve.
 
 
-
-//While crawling forward to a passing place on the right, if the road is occupied.
-//Abandon crawling forward, begin reversing.
-/*+!resolve : crawl_forward(rightPas) & road(_,_,occupied(Driver),_)
-    <- -crawl_forward(rightPas);
-        ?facing(Dir);
-        check_behind(1, Dir);
-        !reverse;
-        !resolve.*/
 
 //While crawling forward to a passing place on the right, if the road is occupied.
 //Begin resolving with the occupying agent.
@@ -407,32 +289,21 @@ vision_dist(3).
 +!resolve : not road(_,_,occupied(_),_)
     <-  -resolving_with(_).
 
-//While resolving, if there is a passing place ahead, check if the road is clear to the passing place, then which side the passing place is on
+//While resolving, if there is a passing place ahead to the left and it is free
 //Begin crawling to the passing place.
-+!resolve : road(Xp,_,_,has_pass(Side)) & road(Xa,_,occupied(_),_) & pass(_,_,free,_)
-    <-  +crawl_check_roadclear;
-        if (Side=left) {
-            +crawl_forward(leftPas);
-        } else {
-            +crawl_forward(rightPas);
-        }
-        ?facing(Dir);
-        ?pos(_,Xm,_);
-        //Xp is the X of passing place, Xa is the X of other agent, Xm is the X of me.
-        //If we are facing left, numbers are descending, so my position will be a higher number than where I am facing. So we make sure to always subtract from the higher number.
-        if(Dir=left) {
-            DistToPass = Xm - Xp;
-            DistToAgent = Xm - Xa; 
-        } else {
-            DistToPass = Xp - Xm;
-            DistToAgent = Xa - Xm; 
-        }
-        +crawl_passDist(DistToPass);
-        +crawl_agentDist(DistToAgent);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        .wait(500);
-        !resolve.
++!resolve : road(_,_,_,has_pass(left)) & pass(_,_,free,_)
+    <- +crawl_forward(leftPas);
+    ?facing(Dir);
+    check_ahead(1, Dir);
+    !resolve.
+
+//While resolving, if there is a passing place ahead to the right
+//Begin crawling to the passing place.
++!resolve : road(_,_,_,has_pass(right))
+    <- +crawl_forward(rightPas);
+    ?facing(Dir);
+    check_ahead(1, Dir);
+    !resolve.
     
 
 //If standing right next to pass
@@ -440,7 +311,6 @@ vision_dist(3).
 +!resolve : pass_found(0)
     <-  ?facing(Dir);
         ?vision_dist(Vis);
-        -pass_found(0);
         move_backward(Dir);
         .wait(500);
         move_backward(Dir);
@@ -498,6 +368,7 @@ vision_dist(3).
         +reversing_past_pass(2);
         ?facing(Dir);
         move_backward(Dir);
+        .wait(500);
         check_behind(1, Dir);
         !reverse.
 
@@ -544,7 +415,6 @@ vision_dist(3).
 //While reversing past passing place, if the desired distance is reached, go into waiting_for_pass state.
 +!reverse : reversing_past_pass(0)
     <-  -reversing_past_pass(_);
-        -pass_found(_);
         .wait(1000);
         !waiting_for_pass.
 
@@ -573,6 +443,7 @@ vision_dist(3).
 +!reverse : road(_,_,_,_)
     <-  ?facing(Dir);
         move_backward(Dir);
+        .wait(500);
         !reverse.
 
 //While reversing with no road percepts, check behind one space.
@@ -588,7 +459,7 @@ vision_dist(3).
 +!waiting_for_pass : pass(_,_,free,_)
     <-  .print("Passing place freed up! Resuming resolving scenario.").
 
-//REVISIT: Possibly do something about free road here too.
+
 //While waiting for pass, keep checking ahead and waiting.
 +!waiting_for_pass
     <-  ?facing(Dir);

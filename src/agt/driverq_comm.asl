@@ -63,7 +63,6 @@ starting_up.
 +!drive : pos(_, X,Y) & roadEnd(X,Y)
     <-  .my_name(A);
         .print("I have reached my destination. Goodbye!");
-        //Temporary solution to get agents out of the way
         remove_me;
         .kill_agent(A).
 
@@ -147,7 +146,6 @@ starting_up.
 -opposite_pass
     <-  -resolving_with(_);
         ?pos(_,X,Y);
-        //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         -pass_found(_);
         +pass_found(0).
 
@@ -156,7 +154,6 @@ starting_up.
 -in_pass(_)
     <-  -resolving_with(_);
         ?pos(_,X,Y);
-        //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         -pass_found(_);
         +pass_found(1).
 

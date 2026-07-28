@@ -55,18 +55,8 @@ starting_up.
 
 //HIGHER ORDER NEGOTIATION
 
-//This causes more harm than good, possibly remove this altogether.
-/*+!hon : enter_hon
-    <-  .print("I am already in HON and been told to enter HON");
-        -enter_hon;
-
-        //Testing to get rid of the percepts.
-        ?facing(Dir);
-        ?vision_dist(Vis);
-        check_ahead(Vis, Dir);
-        !hon.*/
-
 //HANDLING OF MESSAGES FROM OTHERS.
+//Agent passes the instructions to agents behind to enter the correct negotiation method state, depending on whether they are in the long or short queue.
 +!hon : enter_hon_resolve_long(Queue_length)[source(Sender)]
     <-  +hon_target_queue_length(Queue_length);
         if(hon_driver_behind_me(Driver)) {
@@ -87,7 +77,7 @@ starting_up.
         -enter_hon_resolve_short(_)[source(Sender)];
         !hon_resolve_short.
 
-//Had to separate these methods as such as the standby part was important, otherwise the front agents would be stuck in a loop sending the message to each other. 
+//Getting ready to negotiate with other queue
 +!hon : hon_ready_to_negotiate[source(Driver)] & hon_standby_checkdrivers_waitforleader
     <-  .print("WHILE I AM BEHIND, Got message about driver being ready to negotiate. Processing...");
         ?facing(Dir);
@@ -128,7 +118,7 @@ starting_up.
         -hon_ready_to_negotiate[source(Driver)];
         !hon. 
 
-
+//Saving information about how long the queue is
 +!hon : hon_following_chain(X)[source(Sender)] & not my_name(Sender)
    <-   .print("Got message about drivers I am following. Processing...");
         -hon_following_chain(X)[source(Sender)];
@@ -136,6 +126,7 @@ starting_up.
         +hon_following_ahead(X);
         !hon.
 
+//Processing information received from other queue leader
 +!hon : hon_driver_behind_other(Driver)[source(Sender)]
     <- .print("Got message about driver behind other. Processing...");
         ?facing(Dir);
@@ -145,7 +136,7 @@ starting_up.
         ?road(_,_,occupied(Ahead),_);
         -hon_driver_ahead(_);
         +hon_driver_ahead(Ahead);
-        //Do not need to use the actual Driver data yet but may be good later on.
+        //Driver data not used yet. Possibly good for future works.
     
         if (Sender=Ahead) {
             if(hon_drivers_ahead(X)) {
@@ -165,6 +156,8 @@ starting_up.
         !hon.
     
 //CASE FOR PREVIOUSLY FAILED RESOLUTION.
+//When agents fail to resolve due to similar stimuli, decide between who should reverse based on passing place location and distance.
+//Right now if everything is equal, agents decide based on their ID number.
 +!hon : should_reverse(equal)
     <-  .print("We are equal. Deciding based on name");
         ?my_name(Me);
@@ -255,8 +248,8 @@ starting_up.
 
 //CASES FOR GETTING STUCK IN LONG QUEUE.
 
-
 //RESOLUTION FOR LONGER SIDE.:
+//Do Back-And-Forth Motions around the passing place until everyone from the other queue has passed
 //Check to see if everyone has passed.
 +!hon_resolve_long : hon_long_done[source(A)]
     <-  .print("Leader is driving ahead! Exiting HON, we can drive on.");
@@ -388,7 +381,7 @@ starting_up.
         .wait(500);
         !hon_resolve_long.
 
-//Possibly add "If dont have hon_target_queue_length, try to get it from somewhere (drivers ahead maybe) and then convert it to the belief"
+
 +!hon_resolve_long
     <-  .print("I AM STUCK IN LONG RESOLVE, NOT SURE WHAT TO DO");
         .wait(500);
@@ -397,8 +390,10 @@ starting_up.
         !hon_resolve_long.
 
 //RESOLUTION FOR SHORTER SIDE.:
-//-Step forward until a passing place is found.
-//-Enter the passing place. Exit HON_resolve_short
+//Reverse back and give ample space for long queue to do back-and-forth motion, and follow them to the passing place when they approach.
+
+//Step forward until a passing place is found.
+//Enter the passing place. Exit HON_resolve_short
 
 +!hon_resolve_short : pass(X,Y,free,Side)
     <-  .print("Found passing place! Pulling in.");
@@ -492,7 +487,6 @@ starting_up.
 
 
 //Getting Stuck: Negotiating phase.
-//STILL NEED TO HANDLE FURTHER CASES SUCH AS FAR PASSING PLACES AND MULTIPLE PASSING PLACES
 
 +!hon : enter_hon_resolve_short(X)
     <-  .print("Getting ready to perform short-queue resolution.");
@@ -518,9 +512,9 @@ starting_up.
         check_ahead(1,Dir);
         !hon_resolve_long.
 
+//Cases of equal queue length may require further processing of passing place locations similar to the case of failed resolution. For now, this is left for future works.
 +!hon : hon_negotiating & hon_drivers_behind(X) & hon_other_queue_length(Y) & X=Y
     <-  .print("Queue sizes are equal! Checking other variables...");
-        //Flesh this out more if needed. Future works.
         .wait(5000);
         !hon.
 
@@ -550,15 +544,13 @@ starting_up.
         .wait(1000);
         ?hon_driver_ahead(Other);
         ?hon_drivers_behind(X);
-        //Passing place side goes here.
         .send(Other,tell,hon_other_queue_length(X));
         !hon.
 
 
 //Initial setup of counting everyone up.
 +!hon : hon_standby_checkdrivers_waitforleader
-    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
-        .print("I AM IN HON! I AM BEHIND!");
+    <-  .print("I AM IN HON! I AM BEHIND!");
         .wait(1000);
         !hon.
 
@@ -572,8 +564,7 @@ starting_up.
         !hon.
 
 +!hon : hon_standby_checkdrivers_waitforbehind & hon_ready_myside
-    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
-        .print("I AM IN HON AND READY! WAITING FOR OTHERS TO GET READY!");
+    <-  .print("I AM IN HON AND READY! WAITING FOR OTHERS TO GET READY!");
         .wait(500);
         !hon.
 
@@ -583,8 +574,7 @@ starting_up.
         !hon.
 
 +!hon : hon_standby_checkdrivers_waitforbehind
-    <-  //TEMPORARY TEST TO SEE IF AGENT ARRIVES TO THIS CONCLUSION
-        .print("I AM IN HON! I AM AHEAD!");
+    <-  .print("I AM IN HON! I AM AHEAD!");
         .wait(500);
         !hon.
 
@@ -630,16 +620,6 @@ starting_up.
             +hon_standby_checkdrivers_waitforbehind;
         }
         !hon.
-
-        
-//WILL NEED TO RETURN HERE:
-    //GO TO THE TOP AND HANDLE THE FOLLOWING MESSAGES:
-    //-hon_Ready_to_negotiate
-    //-Hon_driver_behind_other
-    //-Hon_following_chain
-    //-Hon_passes_ahead
-
-
 
 
 +!hon : hon_look_ahead & hon_following_ahead(X) & X>0
@@ -800,7 +780,6 @@ starting_up.
 -opposite_pass
     <-  -resolving_with(_);
         ?pos(_,X,Y);
-        //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         -pass_found(_);
         +pass_found(0).
 
@@ -809,7 +788,6 @@ starting_up.
 -in_pass(_)
     <-  -resolving_with(_);
         ?pos(_,X,Y);
-        //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         -pass_found(_);
         +pass_found(1).
 

@@ -141,7 +141,6 @@ public class Env extends Environment {
         for (String agName : agentNameIdDict.keySet()) {
             int agID = agentNameIdDict.get(agName);
 
-            //clearPercepts(agName);
 
             Location agLoc = model.getAgPos(agID);
 
@@ -647,7 +646,6 @@ public class Env extends Environment {
                 coef = -1;
             }
     
-            //Will worry about having up or down later)
             Location newPos = model.getAgPos(agID);
             newPos.x = newPos.x + coef;
 

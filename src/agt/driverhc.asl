@@ -39,7 +39,6 @@ vision_dist(3).
 +!drive : pos(_, X,Y) & roadEnd(X,Y)
     <-  .my_name(A);
         .print("I have reached my destination. Goodbye!");
-        //Temporary solution to get agents out of the way
         remove_me;
         .kill_agent(A).
 
@@ -69,10 +68,9 @@ vision_dist(3).
 -in_pass(Side)
     <-  -resolving_with(_);
         ?pos(_,X,Y);
-        //!!!!!!!Y value hard-coded for now. Would need to implement an if-statement and checking for where the road is later.
         +last_pass(X,1,free,has_pass(Side)).
 
-//crawl_check_roadclear and crawl_blocked are needed for a specific bug in Scenario 7: 
+//crawl_check_roadclear and crawl_blocked are needed for a specific issue in Scenario 7, caused by the synchronous nature of AgentSpeak:
 //If agents see a passing place ahead of themselves and beging crawling forward, they check 1 space in front. But the 2 agents are 2 spaces from each other, and they will step through each other.
 //This solution ensures that agents do not begin crawling forward if an agent is closer than the passing place.
 +!resolve : crawl_blocked & not road(_,_,occupied(Driver),_)
@@ -169,7 +167,7 @@ vision_dist(3).
         !resolve.
 
 
-
+//The agent waits for the oncoming agent to arrive while in the passing place
 +!resolve : not_arrived_yet(D) & road(_,_,occupied(D),_)
     <-  -not_arrived_yet(D);
         .wait(500);
@@ -205,6 +203,7 @@ vision_dist(3).
 +!resolve : not road(_,_,occupied(D),_)
     <-  -resolving_with(D).
 
+//The agent checks whether the passing place or the oncoming driver is closer, which allows the agent to decide whether to approach or wait for the oncoming agent to reverse during crawl_forward.
 +!resolve : road(Xp,_,_,has_pass(Side)) & road(Xa,_,occupied(_),_) & pass(_,_,free,_)
     <-  +crawl_check_roadclear;
         if (Side=left) {
