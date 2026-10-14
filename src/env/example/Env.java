@@ -3,23 +3,30 @@ package example;
 // Environment code for project simpleppapp
 
 import jason.asSyntax.*;
+import jason.bb.DefaultBeliefBase;
 import jason.environment.*;
 //import jason.asSyntax.parser.*;
 
 import jason.environment.grid.GridWorldModel;
 import jason.environment.grid.GridWorldView;
 import jason.environment.grid.Location;
+import jason.mas2j.ClassParameters;
+import jason.runtime.Settings;
 
 //import java.text.ParseException;
 //import java.util.logging.*;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Dictionary;
 
 //import static java.lang.Math.abs;
 
 import java.util.HashMap;
+import java.util.List;
+import jason.bb.DefaultBeliefBase;
 
 //import javax.swing.JFrame;
 //import javax.swing.JLabel;
@@ -32,7 +39,12 @@ import java.awt.Graphics;
 import java.util.logging.Logger;
 //import javax.swing.ImageIcon;
 
+
+
 //import java.util.ArrayList;
+
+import java.util.Random;
+
 
 public class Env extends Environment {
 
@@ -52,6 +64,7 @@ public class Env extends Environment {
     public static final int RoadSize = 13; // Road size
     public static final int ROAD = 16; //To determine where there is road.
     public static final int PASS = 32; //To determine where there is passing place.
+    Random rand = new Random();
 
     public int pasID = 0; //number of passing places
 
@@ -67,6 +80,55 @@ public class Env extends Environment {
     public void init(String[] args) {
         worldOption = Integer.parseInt(args[0]);
         nbOfAgents = Integer.parseInt(args[1]);
+
+        //Handle the randomisation for the random scenario
+        //Currently any world option number higher than 900 gets randomised. In future works this needs to be adapted if further numbers are introduced
+        if (worldOption > 900) {
+            //Code for handling custom seeds adapted from https://stackoverflow.com/questions/6001368/how-do-i-get-the-seed-from-a-random-in-java
+            //To set a specific custom seed, comment out the line below
+            long customSeed = rand.nextLong();
+            //And uncomment the line below, inserting the specific seed.
+            //long customSeed = ;
+            rand.setSeed(customSeed);
+            System.out.println("Running simulation with seed: " + customSeed);
+
+            //rand.nextInt includes 0 but excludes the parameter given. We add +2 so the number of agents is between 2-4 
+            nbOfAgents = rand.nextInt(3) + 2;
+            String tempAgName = "";
+
+            if (worldOption == 901) {
+                tempAgName = "driverhc";
+            } else if (worldOption == 902) {
+                tempAgName = "driverq_nocomm";
+            } else if (worldOption == 903) {
+                tempAgName = "driverq_comm";
+            } else if (worldOption == 904) {
+                tempAgName = "driverq_hon";
+            } else {
+                //Temporarily made into driverhc as a safeguard
+                tempAgName = "driverhc";
+            }
+            List<String> tempArchitectures = new ArrayList<>();
+
+            //Assuming one agent is already in the simulation
+            for (int i = 2; i < nbOfAgents + 1; i++) {
+                try {
+                    getEnvironmentInfraTier().getRuntimeServices().createAgent(
+                        tempAgName + i,     // agent name
+                        tempAgName + ".asl",       // AgentSpeak source
+                        "jason.asSemantics.Agent",            // default agent class
+                        tempArchitectures,            // default architecture class
+                        new ClassParameters("jason.bb.JDBCPersistentBB"),            // default belief base parameters
+                        new Settings(),
+                        getEnvironmentInfraTier().getRuntimeServices().getAgentSnapshot("hcdriver1"));   // default settings
+                } catch (Exception e) {
+                    // Handle the failure (e.g., if the .asl file isn't found or class loading fails)
+                    System.err.println("Failed to dynamically spawn the agent: " + e.getMessage());
+                    e.printStackTrace(); 
+                }
+            }
+        };
+
         model = new RoadModel(worldOption, nbOfAgents);
         view  = new RoadView(model);
         model.setView(view);
@@ -595,6 +657,34 @@ public class Env extends Environment {
                     add(PASS, RoadSize/2, 0);
                     add(PASS, 2, 0);
                     add(PASS, 10, 2);
+                    break;
+
+                //RANDOMISED SCENARIOS
+                //Highway Code Agents
+                case 901:
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverhc3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverhc4", Direct.left);
+                    }
+
+                    //We restrict the number of passing places at 3. Any more would remove the challenge of limited passing place availability. 
+                    int nbOfPasses = rand.nextInt(3) + 1;
+                    List<Integer> passPosList = new ArrayList<>();
+
+                    //Randomising a list of numbers without repeats adapted from https://www.baeldung.com/java-unique-random-numbers
+                    for(int i = 0; i < nbOfPasses; i++) {
+                        //The positions of passing places are between the starting positions of agent 3 and agent 4
+                        passPosList.add(rand.nextInt(RoadSize - 4) + 2);
+                    }
+                    Collections.shuffle(passPosList);
+
+                    for(int i = 0; i < nbOfPasses; i++)
+                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
                     break;
 
                 //Default: 2 cars, PASS in middle to left of d1.

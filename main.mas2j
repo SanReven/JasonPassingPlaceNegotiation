@@ -49,6 +49,13 @@ Questionnaire agents - higher order negotiation
 301-304: 2 driverq_hon agents.
 305-308: 3 driverq_hon agents.
 309-310: 4 driverq_hon agents.
+
+
+Randomised Environment (Set only 1 agent for the desired class. All agents are defined dynamically at runtime)
+901: driverhc agents
+902: driverq_nocomm agents
+903: driverq_comm agents
+904: driverq_hon agents
 */
 
 
@@ -61,7 +68,7 @@ To change scenarios:
 MAS main {
 
     //(world option number, number of agents)
-    environment: example.Env(1,2)
+    environment: example.Env(901,1)
 
     agents: driverhc #1;
             //driverq_nocomm #3;
