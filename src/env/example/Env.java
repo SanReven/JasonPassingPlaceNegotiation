@@ -67,6 +67,7 @@ public class Env extends Environment {
     Random rand = new Random();
 
     public int pasID = 0; //number of passing places
+    public int nbOfPasses = 0;
 
     public enum Direct {
         //Change to lowercase if agents are not happy storing full caps.
@@ -91,9 +92,18 @@ public class Env extends Environment {
             //long customSeed = ;
             rand.setSeed(customSeed);
             System.out.println("Running simulation with seed: " + customSeed);
+            
+            if(worldOption > 904) {
+                nbOfPasses = nbOfAgents / 10;
+                nbOfAgents = nbOfAgents % 10;
+            } else {
+                //rand.nextInt includes 0 but excludes the parameter given. We add +2 so the number of agents is between 2-4 
+                nbOfAgents = rand.nextInt(3) + 2;
+                //We restrict the number of passing places at 3, as any more would reduce the challenge of limited passing place availability.
+                nbOfPasses = rand.nextInt(3) + 1;
+                
 
-            //rand.nextInt includes 0 but excludes the parameter given. We add +2 so the number of agents is between 2-4 
-            nbOfAgents = rand.nextInt(3) + 2;
+                /*
             String tempAgName = "";
 
             if (worldOption == 901) {
@@ -108,26 +118,39 @@ public class Env extends Environment {
                 //Temporarily made into driverhc as a safeguard
                 tempAgName = "driverhc";
             }
+
+
+            
+            OLD ATTEMPT AT SPAWNING AGENTS DYNAMICALLY, TAKEN FROM THE JASON FAQ. THIS DOES NOT WORK AT THE MOMENT.
             List<String> tempArchitectures = new ArrayList<>();
+
 
             //Assuming one agent is already in the simulation
             for (int i = 2; i < nbOfAgents + 1; i++) {
+                String newAgName = tempAgName + i;
                 try {
                     getEnvironmentInfraTier().getRuntimeServices().createAgent(
-                        tempAgName + i,     // agent name
+                        newAgName,     // agent name
                         tempAgName + ".asl",       // AgentSpeak source
                         "jason.asSemantics.Agent",            // default agent class
                         tempArchitectures,            // default architecture class
                         new ClassParameters("jason.bb.JDBCPersistentBB"),            // default belief base parameters
-                        new Settings(),
-                        getEnvironmentInfraTier().getRuntimeServices().getAgentSnapshot("hcdriver1"));   // default settings
+                        new Settings(), // default settings
+                        getEnvironmentInfraTier().getRuntimeServices().getAgentSnapshot("hcdriver1"));
+                        //Start the spawned agent
+                        getEnvironmentInfraTier().getRuntimeServices().startAgent(newAgName);   
                 } catch (Exception e) {
                     // Handle the failure (e.g., if the .asl file isn't found or class loading fails)
                     System.err.println("Failed to dynamically spawn the agent: " + e.getMessage());
                     e.printStackTrace(); 
                 }
             }
+                */
+            }
+
+            
         };
+        
 
         model = new RoadModel(worldOption, nbOfAgents);
         view  = new RoadView(model);
@@ -347,6 +370,16 @@ public class Env extends Environment {
     class RoadModel extends GridWorldModel {
         private RoadModel(int worldType, int agNumber) {
             super(RoadSize, 3, agNumber);
+
+            //Random passing place layout setup. This will not be used in scenarios outside of 901-908.
+            List<Integer> passPosList = new ArrayList<>();
+
+            //Randomising a list of numbers without repeats adapted from https://www.baeldung.com/java-unique-random-numbers
+            for(int i = 0; i < nbOfPasses; i++) {
+                //The positions of passing places are between the starting positions of agent 3 and agent 4
+                passPosList.add(rand.nextInt(RoadSize - 4) + 2);
+            }
+            Collections.shuffle(passPosList);
 
             // initial location of agents and Passing places based on world type
 
@@ -671,21 +704,130 @@ public class Env extends Environment {
                         addDriver(3, RoadSize - 3, 1, "driverhc4", Direct.left);
                     }
 
-                    //We restrict the number of passing places at 3. Any more would remove the challenge of limited passing place availability. 
-                    int nbOfPasses = rand.nextInt(3) + 1;
-                    List<Integer> passPosList = new ArrayList<>();
-
-                    //Randomising a list of numbers without repeats adapted from https://www.baeldung.com/java-unique-random-numbers
-                    for(int i = 0; i < nbOfPasses; i++) {
-                        //The positions of passing places are between the starting positions of agent 3 and agent 4
-                        passPosList.add(rand.nextInt(RoadSize - 4) + 2);
+                    for(int i = 0; i < nbOfPasses; i++)
+                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 902:
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverq_nocomm3", Direct.right);
                     }
-                    Collections.shuffle(passPosList);
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverq_nocomm4", Direct.left);
+                    }
+
+                    for(int i = 0; i < nbOfPasses; i++)
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 903:
+                    addDriver(0, 0, 1, "driverq_comm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverq_comm3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverq_comm4", Direct.left);
+                    }
+
+                    for(int i = 0; i < nbOfPasses; i++)
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 904:
+                    addDriver(0, 0, 1, "driverq_hon1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverq_hon3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverq_hon4", Direct.left);
+                    }
+
+                    for(int i = 0; i < nbOfPasses; i++)
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 905:
+                    addDriver(0, 0, 1, "driverhc1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverhc2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverhc3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverhc4", Direct.left);
+                    }
+                    if (agNumber > 4) {
+                        addDriver(4, 4, 1, "driverhc5", Direct.right);
+                    }
+                    if (agNumber > 5) {
+                        addDriver(5, RoadSize - 5, 1, "driverhc6", Direct.left);
+                    }
+                    
+                    for(int i = 0; i < nbOfPasses; i++)
+                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 906:
+                    addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_nocomm2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverq_nocomm3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverq_nocomm4", Direct.left);
+                    }
+                    if (agNumber > 4) {
+                        addDriver(4, 4, 1, "driverq_nocomm5", Direct.right);
+                    }
+                    if (agNumber > 5) {
+                        addDriver(5, RoadSize - 5, 1, "driverq_nocomm6", Direct.left);
+                    }
+                    
+                    for(int i = 0; i < nbOfPasses; i++)
+                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 907:
+                    addDriver(0, 0, 1, "driverq_comm1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_comm2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverq_comm3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverq_comm4", Direct.left);
+                    }
+                    if (agNumber > 4) {
+                        addDriver(4, 4, 1, "driverq_comm5", Direct.right);
+                    }
+                    if (agNumber > 5) {
+                        addDriver(5, RoadSize - 5, 1, "driverq_comm6", Direct.left);
+                    }
+                    
+                    for(int i = 0; i < nbOfPasses; i++)
+                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
+                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                    break;
+                case 908:
+                    addDriver(0, 0, 1, "driverq_hon1", Direct.right);
+                    addDriver(1, RoadSize - 1, 1, "driverq_hon2", Direct.left);
+                    if (agNumber > 2) {
+                        addDriver(2, 2, 1, "driverq_hon3", Direct.right);
+                    }
+                    if (agNumber > 3) {
+                        addDriver(3, RoadSize - 3, 1, "driverq_hon4", Direct.left);
+                    }
+                    if (agNumber > 4) {
+                        addDriver(4, 4, 1, "driverq_hon5", Direct.right);
+                    }
+                    if (agNumber > 5) {
+                        addDriver(5, RoadSize - 5, 1, "driverq_hon", Direct.left);
+                    }
 
                     for(int i = 0; i < nbOfPasses; i++)
                         //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
                         add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
                     break;
+                
 
                 //Default: 2 cars, PASS in middle to left of d1.
                 default: 
