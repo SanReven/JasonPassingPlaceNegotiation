@@ -60,6 +60,7 @@ vision_dist(3).
 +!drive : not road(_,_,_,_)
     <-  ?vision_dist(Vis);
         ?facing(Dir);
+        .wait(500);
         check_ahead(Vis,Dir);
         !drive.
 

@@ -12,6 +12,7 @@ import jason.environment.grid.GridWorldView;
 import jason.environment.grid.Location;
 import jason.mas2j.ClassParameters;
 import jason.runtime.Settings;
+import jason.stdlib.print;
 
 //import java.text.ParseException;
 //import java.util.logging.*;
@@ -69,6 +70,8 @@ public class Env extends Environment {
     public int pasID = 0; //number of passing places
     public int nbOfPasses = 0;
 
+    public HashMap<String, Integer> agentStepCountDict = new HashMap<String, Integer>() {};
+
     public enum Direct {
         //Change to lowercase if agents are not happy storing full caps.
         up, right, left, down
@@ -87,7 +90,7 @@ public class Env extends Environment {
         if (worldOption > 900) {
             //Code for handling custom seeds adapted from https://stackoverflow.com/questions/6001368/how-do-i-get-the-seed-from-a-random-in-java
             //To set a specific custom seed, comment out the line below
-            long customSeed = rand.nextLong();
+            int customSeed = rand.nextInt();
             //And uncomment the line below, inserting the specific seed.
             //long customSeed = ;
             rand.setSeed(customSeed);
@@ -204,9 +207,17 @@ public class Env extends Environment {
                 //Temporary graveyard/completion area for agents that have run to completion and reached the end of the road.
                 Location finished = new Location(0,0);
                 model.moveTo(agName,finished);
+                System.out.println(agName + " FINISHED WITH STEPS: " + agentStepCountDict.get(agName));
             } else {
                 return false;
             }
+
+            //if (agentStepCountDict.get(agName) != null) {
+            //    agentStepCountDict.put(agName, agentStepCountDict.get(agName) + 1);
+            //} else {
+            //    agentStepCountDict.put(agName, 1);
+            //}
+            System.out.println(agName + " steps taken: " + agentStepCountDict.get(agName));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -379,7 +390,7 @@ public class Env extends Environment {
                 //The positions of passing places are between the starting positions of agent 3 and agent 4
                 passPosList.add(rand.nextInt(RoadSize - 4) + 2);
             }
-            Collections.shuffle(passPosList);
+            Collections.shuffle(passPosList, rand);
 
             // initial location of agents and Passing places based on world type
 
@@ -706,7 +717,7 @@ public class Env extends Environment {
 
                     for(int i = 0; i < nbOfPasses; i++)
                         //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 902:
                     addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
@@ -719,7 +730,7 @@ public class Env extends Environment {
                     }
 
                     for(int i = 0; i < nbOfPasses; i++)
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 903:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
@@ -732,7 +743,7 @@ public class Env extends Environment {
                     }
 
                     for(int i = 0; i < nbOfPasses; i++)
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 904:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
@@ -745,7 +756,7 @@ public class Env extends Environment {
                     }
 
                     for(int i = 0; i < nbOfPasses; i++)
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 905:
                     addDriver(0, 0, 1, "driverhc1", Direct.right);
@@ -764,8 +775,7 @@ public class Env extends Environment {
                     }
                     
                     for(int i = 0; i < nbOfPasses; i++)
-                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 906:
                     addDriver(0, 0, 1, "driverq_nocomm1", Direct.right);
@@ -784,8 +794,7 @@ public class Env extends Environment {
                     }
                     
                     for(int i = 0; i < nbOfPasses; i++)
-                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 907:
                     addDriver(0, 0, 1, "driverq_comm1", Direct.right);
@@ -804,8 +813,7 @@ public class Env extends Environment {
                     }
                     
                     for(int i = 0; i < nbOfPasses; i++)
-                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 case 908:
                     addDriver(0, 0, 1, "driverq_hon1", Direct.right);
@@ -824,8 +832,7 @@ public class Env extends Environment {
                     }
 
                     for(int i = 0; i < nbOfPasses; i++)
-                        //Random number of 1 or -1 without 0 adapted from https://stackoverflow.com/questions/6347995/java-generate-a-random-1-or-1
-                        add(PASS, passPosList.remove(0), (random.nextBoolean() ? 1 : -1) + 1);
+                        add(PASS, passPosList.remove(0), (rand.nextBoolean() ? 1 : -1) + 1);
                     break;
                 
 
