@@ -291,6 +291,7 @@ vision_dist(3).
 +!reverse : road(_,_,_,_)
     <-  ?facing(Dir);
         move_backward(Dir);
+        .wait(500);
         !reverse.
 
 +!reverse 

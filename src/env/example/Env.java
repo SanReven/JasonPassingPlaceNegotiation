@@ -171,16 +171,27 @@ public class Env extends Environment {
                 Direct facing = Direct.valueOf((action.getTerm(0)).toString());
                 //logger.info("Direction converted: " + facing);
                 model.moveForward(agName, facing);
+
+                if (agentStepCountDict.get(agName) != null) {
+                    agentStepCountDict.put(agName, agentStepCountDict.get(agName) + 1);
+                } else {
+                    agentStepCountDict.put(agName, 1);
+                }
             } else if (action.getFunctor().equals("move_backward")) {
                 //Turn the direction to the opposite
                 Direct facing = Direct.valueOf((action.getTerm(0)).toString());
-                //Quick and dirty implementation for now
                 if(facing == Direct.right) {
                     facing = Direct.left;
                 } else {
                     facing = Direct.right;
                 }
                 model.moveForward(agName, facing);
+
+                if (agentStepCountDict.get(agName) != null) {
+                    agentStepCountDict.put(agName, agentStepCountDict.get(agName) + 1);
+                } else {
+                    agentStepCountDict.put(agName, 1);
+                }
             } else if (action.getFunctor().equals("check_ahead")) {
                 Direct facing = Direct.valueOf((action.getTerm(1)).toString());
                 int dist = (int)((NumberTerm)action.getTerm(0)).solve();
@@ -196,9 +207,21 @@ public class Env extends Environment {
                 Location passLoc = new Location(x,y);
                 logger.info("PASSING PLACE Location: " + passLoc);
                 model.moveTo(agName,passLoc);
+
+                if (agentStepCountDict.get(agName) != null) {
+                    agentStepCountDict.put(agName, agentStepCountDict.get(agName) + 1);
+                } else {
+                    agentStepCountDict.put(agName, 1);
+                }
             } else if (action.getFunctor().equals("pullout")) {
                 Direct facing = Direct.valueOf((action.getTerm(0)).toString());
                 pullOut(agName, facing);
+
+                if (agentStepCountDict.get(agName) != null) {
+                    agentStepCountDict.put(agName, agentStepCountDict.get(agName) + 1);
+                } else {
+                    agentStepCountDict.put(agName, 1);
+                }
             } else if (action.getFunctor().equals("look_around")) {
                 Direct facing = Direct.valueOf((action.getTerm(1)).toString());
                 int dist = (int)((NumberTerm)action.getTerm(0)).solve();
@@ -212,11 +235,7 @@ public class Env extends Environment {
                 return false;
             }
 
-            //if (agentStepCountDict.get(agName) != null) {
-            //    agentStepCountDict.put(agName, agentStepCountDict.get(agName) + 1);
-            //} else {
-            //    agentStepCountDict.put(agName, 1);
-            //}
+            
             System.out.println(agName + " steps taken: " + agentStepCountDict.get(agName));
         } catch (Exception e) {
             e.printStackTrace();
